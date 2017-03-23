@@ -2155,6 +2155,19 @@ set_interaction_masks(Exo_DB *exo)
 	  v = POLYMER_STRESS33;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 
 	  v = VELOCITY_GRADIENT11;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
@@ -2181,6 +2194,83 @@ set_interaction_masks(Exo_DB *exo)
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  break;
 
+	case R_LOG_CONF11:
+	case R_LOG_CONF12:
+	case R_LOG_CONF13:
+	case R_LOG_CONF22:
+	case R_LOG_CONF23:
+	case R_LOG_CONF33:
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = TEMPERATURE;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MASS_FRACTION;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MESH_DISPLACEMENT1;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MESH_DISPLACEMENT2;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MESH_DISPLACEMENT3;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PRESSURE;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = POLYMER_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = POLYMER_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = POLYMER_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = POLYMER_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = POLYMER_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = POLYMER_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = LOG_CONF33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+
+
+	  v = VELOCITY_GRADIENT11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+
+	  v = SHEAR_RATE;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = FILL;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  break;
+	  
 	case R_GRADIENT11:
 	case R_GRADIENT12:
 	case R_GRADIENT13:

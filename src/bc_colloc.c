@@ -2377,6 +2377,42 @@ load_variable (double *x_var,        /* variable value */
       var = PRESSURE;
       *d_x_var = (1. + 2. * tt) / dt;
       break;
+
+    case LOG_CONF11:
+      *x_var = fv->S[0][0][0];
+      var = LOG_CONF11;
+      *d_x_var = 1.;
+      break;
+
+    case LOG_CONF12:
+      *x_var = fv->S[0][0][1];
+      var = LOG_CONF12;
+      *d_x_var = 1.;
+      break;
+
+    case LOG_CONF22:
+      *x_var = fv->S[0][1][1];
+      var = LOG_CONF22;
+      *d_x_var = 1.;
+      break;
+
+    case LOG_CONF13:
+      *x_var = fv->S[0][0][2];
+      var = LOG_CONF13;
+      *d_x_var = 1.;
+      break;
+
+    case LOG_CONF23:
+      *x_var = fv->S[0][1][2];
+      var = LOG_CONF23;
+      *d_x_var = 1.;
+      break;
+
+    case LOG_CONF33:
+      *x_var = fv->S[0][2][2];
+      var = LOG_CONF33;
+      *d_x_var = 1.;
+      break;
     default:
       EH(-1, "Illegal option in load_variable");
     } /* end of switch on jvar */
@@ -2977,7 +3013,7 @@ apply_table_bc( double *func,
       *func = fv->S[7][2][2] - interp_val;
       d_func[var] = 1.0;
       break;
-
+      
     default:
       EH(-1,"Variable not yet implemented in TABLE_BC");
       break;

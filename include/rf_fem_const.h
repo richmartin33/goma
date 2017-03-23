@@ -443,6 +443,14 @@
 #define LIGHT_INTP            182 /*  Light Intensity - Plus direction propagation-RBS*/
 #define LIGHT_INTM            183 /*  Light Intensity - Minus direction propagation-RBS*/
 #define LIGHT_INTD            184 /*  Light Intensity - Scattering Dispersion-RBS*/
+
+#define LOG_CONF11            185 /* aka s11 */
+#define LOG_CONF12            186 /* aka s12 */
+#define LOG_CONF22            187 /* aka s22 */
+#define LOG_CONF13            188 /* aka s13 */
+#define LOG_CONF23            189 /* aka s23 */
+#define LOG_CONF33            190 /* aka s33 */ 
+
 /*
  * define a variable to hold an external field which will be 
  * held fixed in the problem but parametered by the basis functions
@@ -800,7 +808,15 @@
 #define R_LIGHT_INTP            182 /*  Light Intensity - Plus direction propagation*/
 #define R_LIGHT_INTM            183 /*  Light Intensity - Minus direction propagation*/
 #define R_LIGHT_INTD            184 /*  Light Intensity - Scattering Dispersion*/
-#define V_LAST		        185
+
+#define R_LOG_CONF11        185 /* aka S11, 11 component of polymer stress tensor */
+#define R_LOG_CONF12        186 /* aka S12, 12 component of polymer stress tensor */
+#define R_LOG_CONF22        187 /* aka S22, 22 component of polymer stress tensor */
+#define R_LOG_CONF13        188 /* aka S13, 13 component of polymer stress tensor */
+#define R_LOG_CONF23        189 /* aka S23, 23 component of polymer stress tensor */
+#define R_LOG_CONF33        190 /* aka S33, 33 component of polymer stress tensor */
+
+#define V_LAST		        191
 
 
 /* MMH

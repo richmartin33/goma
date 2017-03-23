@@ -445,6 +445,13 @@ setup_pd()
 		  (ce == R_STRESS23)||
 		  (ce == R_STRESS33)||
 
+		  (ce == R_LOG_CONF11)||
+		  (ce == R_LOG_CONF12)||
+		  (ce == R_LOG_CONF13)||
+		  (ce == R_LOG_CONF22)||
+		  (ce == R_LOG_CONF23)||
+		  (ce == R_LOG_CONF33)||
+
 		  (ce == R_STRESS11_1)||
 		  (ce == R_STRESS12_1)||
 		  (ce == R_STRESS13_1)||

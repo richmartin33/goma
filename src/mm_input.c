@@ -8360,6 +8360,18 @@ rd_eq_specs(FILE *ifp,
       ce = set_eqn(R_STRESS23, pd_ptr);
     } else if (!strcasecmp(ts, "stress33")) {
       ce = set_eqn(R_STRESS33, pd_ptr);
+    } else if (!strcasecmp(ts, "log_conf11")) {
+      ce = set_eqn(R_LOG_CONF11, pd_ptr);
+    } else if (!strcasecmp(ts, "log_conf12")) {
+      ce = set_eqn(R_LOG_CONF12, pd_ptr);
+    } else if (!strcasecmp(ts, "log_conf13")) {
+      ce = set_eqn(R_LOG_CONF13, pd_ptr);
+    } else if (!strcasecmp(ts, "log_conf22")) {
+      ce = set_eqn(R_LOG_CONF22, pd_ptr);
+    } else if (!strcasecmp(ts, "log_conf23")) {
+      ce = set_eqn(R_LOG_CONF23, pd_ptr);
+    } else if (!strcasecmp(ts, "log_conf33")) {
+      ce = set_eqn(R_LOG_CONF33, pd_ptr);
     } else if (!strcasecmp(ts, "gradient11")) {
       ce = set_eqn(R_GRADIENT11, pd_ptr);
     } else if (!strcasecmp(ts, "gradient12")) {
@@ -8980,6 +8992,18 @@ rd_eq_specs(FILE *ifp,
       cv = set_var(POLYMER_STRESS23, pd_ptr);
     } else if (!strcasecmp(ts, "S33")) {
       cv = set_var(POLYMER_STRESS33, pd_ptr);
+    } else if (!strcasecmp(ts, "LOG_CONF11")) {
+      cv = set_var(LOG_CONF11, pd_ptr);
+    } else if (!strcasecmp(ts, "LOG_CONF12")) {
+      cv = set_var(LOG_CONF12, pd_ptr);
+    } else if (!strcasecmp(ts, "LOG_CONF13")) {
+      cv = set_var(LOG_CONF13, pd_ptr);
+    } else if (!strcasecmp(ts, "LOG_CONF22")) {
+      cv = set_var(LOG_CONF22, pd_ptr);
+    } else if (!strcasecmp(ts, "LOG_CONF23")) {
+      cv = set_var(LOG_CONF23, pd_ptr);
+    } else if (!strcasecmp(ts, "LOG_CONF33")) {
+      cv = set_var(LOG_CONF33, pd_ptr);
     } else if (!strcasecmp(ts, "G11")) {
       cv = set_var(VELOCITY_GRADIENT11, pd_ptr);
     } else if (!strcasecmp(ts, "G12")) {
@@ -9719,6 +9743,12 @@ rd_eq_specs(FILE *ifp,
     case R_STRESS22:
     case R_STRESS23:
     case R_STRESS33:
+    case R_LOG_CONF11:
+    case R_LOG_CONF12:
+    case R_LOG_CONF13:
+    case R_LOG_CONF22:
+    case R_LOG_CONF23:
+    case R_LOG_CONF33:
     case R_SURF_CHARGE:
     case R_SHELL_USER:
     case R_SHELL_BDYVELO:
@@ -9731,6 +9761,10 @@ rd_eq_specs(FILE *ifp,
     case R_LIGHT_INTP:
     case R_LIGHT_INTM:
     case R_LIGHT_INTD:
+
+      if (ce >= LOG_CONF11 || ce <= LOG_CONF33) {
+	WH(-1, "Scanning 5 etm terms for log conf");
+      }
 
 	if ( fscanf(ifp, "%lf %lf %lf %lf %lf", 
 		    &(pd_ptr->etm[ce][(LOG2_MASS)]),

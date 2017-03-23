@@ -788,6 +788,20 @@ time_step_control(const double delta_t,  const double delta_t_old,
     num_unknowns += ncp[POLYMER_STRESS23];
     num_unknowns += ncp[POLYMER_STRESS33];
 
+    Err_norm      += ecp[LOG_CONF11];
+    Err_norm      += ecp[LOG_CONF12];
+    Err_norm      += ecp[LOG_CONF22];
+    Err_norm      += ecp[LOG_CONF13];
+    Err_norm      += ecp[LOG_CONF23];
+    Err_norm      += ecp[LOG_CONF33];
+
+    num_unknowns += ncp[LOG_CONF11];
+    num_unknowns += ncp[LOG_CONF12];
+    num_unknowns += ncp[LOG_CONF22];
+    num_unknowns += ncp[LOG_CONF13];
+    num_unknowns += ncp[LOG_CONF23];
+    num_unknowns += ncp[LOG_CONF33];
+
     /*
      * Hey, lots of multi-mode Giesekus stress equations, too!
      */

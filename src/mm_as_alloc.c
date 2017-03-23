@@ -1051,6 +1051,11 @@ assembly_alloc(Exo_DB *exo)
     (void) memset(esp->S[0][0][0], 0, MAX_MODES*vim*vim*MDE*sizeof(dbl *));
   }
 
+  if(Num_Var_In_Type[LOG_CONF11]) {
+    esp->log_c = (dbl *****) array_alloc(4, MAX_MODES, vim, vim, MDE, sizeof(dbl *));
+    (void) memset(esp->log_c[0][0][0], 0, MAX_MODES*vim*vim*MDE*sizeof(dbl *));
+  }
+
   /* VELOCITY_GRADIENT */
   if (Num_Var_In_Type[VELOCITY_GRADIENT11]) {
     esp->G = (dbl ****) array_alloc(3, vim, vim, MDE, sizeof(dbl *));

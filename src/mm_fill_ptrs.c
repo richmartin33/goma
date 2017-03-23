@@ -1310,6 +1310,7 @@ load_elem_dofptr(const int ielem,
   int status;
   int k;
   int R_s[MAX_MODES][DIM][DIM], R_g[DIM][DIM];
+  int R_log_c[MAX_MODES][DIM][DIM];
   struct Level_Set_Data *ls_old;
 
 #ifdef DEBUG
@@ -1335,6 +1336,18 @@ load_elem_dofptr(const int ielem,
   R_g[2][0] = R_GRADIENT31;
   R_g[2][1] = R_GRADIENT32; 
   R_g[2][2] = R_GRADIENT33; 
+
+
+  R_log_c[0][0][0] = LOG_CONF11;
+  R_log_c[0][0][1] = LOG_CONF12;
+  R_log_c[0][0][2] = LOG_CONF13;
+  R_log_c[0][1][0] = LOG_CONF12;
+  R_log_c[0][1][1] = LOG_CONF22;
+  R_log_c[0][1][2] = LOG_CONF23;
+  R_log_c[0][2][0] = LOG_CONF13;
+  R_log_c[0][2][1] = LOG_CONF23;
+  R_log_c[0][2][2] = LOG_CONF33;
+
 
   /*
    * Count how many dofs/node for each kind of variable...
@@ -1966,7 +1979,45 @@ load_elem_dofptr(const int ielem,
 	  EH(-1,"Hey,the STRESS33 is needed in CYLINDRICAL VE problems!");
     }
   } 
-  
+
+
+  eqn = R_LOG_CONF11;
+  if (upd->ep[eqn] >= 0) {
+    /* This should loop through all the stress variables 
+     * for all the modes.
+     */
+    if (vn->modes > 1) {
+      EH(-1, "Log conf not setup for more than 1 mode");
+    }
+    for (mode = 0; mode < vn->modes; mode++) {
+      for (b = 0; b < VIM; b++) {
+	for (c = 0; c < VIM; c++) {
+	  if (b <= c) {
+	    eqn = R_log_c[mode][b][c];
+	    if (upd->ep[eqn] >= 0) {
+              load_varType_Interpolation_ptrs(eqn, esp->log_c[mode][b][c],
+					      esp_old->log_c[mode][b][c],
+					      esp_dot->log_c[mode][b][c]);
+            } else {
+	      dofs = ei->dof[R_LOG_CONF11];
+	      for (i = 0; i < dofs; i++) {
+		esp->log_c[mode][b][c][i]       = p0;
+		esp_old->log_c[mode][b][c][i]   = p0;
+		esp_dot->log_c[mode][b][c][i]   = p0;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    if((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
+	pd_glob[0]->CoordinateSystem == SWIRLING ||
+	pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) ) {
+      if( upd->ep[R_LOG_CONF33] == -1 )
+	  EH(-1,"Hey,the LOG_CONF33 is needed in CYLINDRICAL VE problems!");
+    }
+  } 
+
   eqn = R_GRADIENT11;
   if (upd->ep[eqn] >= 0) {
     /* This should loop through all the velocity gradient 

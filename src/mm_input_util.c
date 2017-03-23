@@ -323,6 +323,13 @@ variable_string_to_int(const char *input, const char *err_string)
   else if (!strcmp(input, "POLYMER_STRESS22"))            var = POLYMER_STRESS22;
   else if (!strcmp(input, "POLYMER_STRESS23"))            var = POLYMER_STRESS23;
   else if (!strcmp(input, "POLYMER_STRESS33"))            var = POLYMER_STRESS33;
+
+  else if (!strcmp(input, "LOG_CONF11"))                  var = LOG_CONF11;
+  else if (!strcmp(input, "LOG_CONF12"))                  var = LOG_CONF12;
+  else if (!strcmp(input, "LOG_CONF13"))                  var = LOG_CONF13;
+  else if (!strcmp(input, "LOG_CONF22"))                  var = LOG_CONF22;
+  else if (!strcmp(input, "LOG_CONF23"))                  var = LOG_CONF23;
+  else if (!strcmp(input, "LOG_CONF33"))                  var = LOG_CONF33;
   
   else if (!strcmp(input, "SOLID_DISPLACEMENT1"))         var = SOLID_DISPLACEMENT1;
   else if (!strcmp(input, "SOLID_DISPLACEMENT2"))         var = SOLID_DISPLACEMENT2;

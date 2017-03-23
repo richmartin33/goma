@@ -3285,7 +3285,8 @@ assemble_stress_log_conf(dbl tt,
 
   //Variables for stress, velocity gradient
   int R_s[MAX_MODES][DIM][DIM]; 
-  int v_s[MAX_MODES][DIM][DIM]; 
+  int v_s[MAX_MODES][DIM][DIM];
+  int v_log_c[MAX_MODES][DIM][DIM];
   int v_g[DIM][DIM]; 
   dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];        
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
@@ -3358,8 +3359,22 @@ assemble_stress_log_conf(dbl tt,
   h3 = fv->h3;		      
 
   //Load pointers
-  (void) stress_eqn_pointer(v_s);
-  (void) stress_eqn_pointer(R_s);
+  //  (void) stress_eqn_pointer(v_s);
+  //  (void) stress_eqn_pointer(R_s);
+
+  
+  if( pd->v[LOG_CONF11] ) {
+    v_log_c[0][0][0] = LOG_CONF11;
+    v_log_c[0][0][1] = LOG_CONF12;
+    v_log_c[0][0][2] = LOG_CONF13;
+    v_log_c[0][1][0] = LOG_CONF12;
+    v_log_c[0][1][1] = LOG_CONF22;
+    v_log_c[0][1][2] = LOG_CONF23;
+    v_log_c[0][2][0] = LOG_CONF13;
+    v_log_c[0][2][1] = LOG_CONF23;
+    v_log_c[0][2][2] = LOG_CONF33;
+  }
+
 
   v_g[0][0] = VELOCITY_GRADIENT11;
   v_g[0][1] = VELOCITY_GRADIENT12;
@@ -3501,7 +3516,7 @@ assemble_stress_log_conf(dbl tt,
   for(mode=0; mode<vn->modes; mode++)
     {
       //Load up constants and some pointers
-      load_modal_pointers(mode, tt, dt, s, s_dot, grad_s, d_grad_s_dmesh);
+      load_modal_pointers_log_conf(mode, tt, dt, s, s_dot, grad_s);
 
       //Polymer viscosity
       mup = viscosity(ve[mode]->gn, gamma, d_mup);
@@ -3640,7 +3655,7 @@ assemble_stress_log_conf(dbl tt,
 		{		  
 		  if(a<=b)
 		    {
-		      eqn = R_s[mode][a][b];
+		      eqn = v_log_c[mode][a][b];
 
 		      for(i=0; i<ei->dof[eqn]; i++)
 			{
@@ -3698,6 +3713,641 @@ assemble_stress_log_conf(dbl tt,
 			    }
 
 			  lec->R[upd->ep[eqn]][i] += mass + advection + source;
+			}//i loop
+		    }//if a<=b
+		}// b loop
+	    }//a loop
+	}//if Residual
+
+      /* if(af->Assemble_Jacobian) */
+      /* 	{ */
+      /* 	  //Predetermine some residual terms for that product rule thing */
+      /* 	  dbl R_source, R_advection; */
+      /* 	  for(a=0; a<VIM; a++) */
+      /* 	    { */
+      /* 	      for(b=0; b<VIM; b++) */
+      /* 		{ */
+      /* 		  if(a <= b) */
+      /* 		    { */
+      /* 		      eqn = R_s[mode][a][b]; */
+      /* 		      peqn = upd->ep[eqn]; */
+		      
+      /* 		      R_advection  = v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b]; */
+      /* 		      R_advection -= g_dot_s[a][b] + s_dot_gt[a][b]; */
+
+		      
+      /* 		      R_source = Z*exp_s[a][b]/lambda; */
+      /* 		      if(a==b) */
+      /* 			{ */
+      /* 			  R_source -= Z/lambda; */
+      /* 			}		       */
+      /* 		      if(alpha!=0.0) */
+      /* 			{ */
+      /* 			  R_source += alpha*(exp_s_dot_exp_s[a][b] - 2.0*exp_s[a][b])/lambda; */
+      /* 			  if(a==b) */
+      /* 			    { */
+      /* 			      R_source += alpha/lambda; */
+      /* 			    } */
+      /* 			} */
+      /* 		      for(i=0; i<ei->dof[eqn]; i++) */
+      /* 			{ */
+      /* 			  wt_func = bf[eqn]->phi[i]; */
+			  
+      /* 			  //SUPG weighting, this is SUPG with s, not e^s */
+      /* 			  if(supg!=0.0) */
+      /* 			    { */
+      /* 			      for(w=0; w<dim; w++) */
+      /* 				{ */
+      /* 				  wt_func += supg*h_elem*v[w]*bf[eqn]->grad_phi[i][w]; */
+      /* 				} */
+      /* 			    } */
+		      
+      /* 			  //J_T */
+      /* 			  var = TEMPERATURE; */
+      /* 			  if(pd->v[var]) */
+      /* 			    { */
+      /* 			      pvar = upd->vp[var]; */
+      /* 			      for(j=0; j<ei->dof[var]; j++) */
+      /* 				{ */
+      /* 				  phi_j = bf[var]->phi[j]; */
+				  
+      /* 				  mass = 0.0;			   */
+      /* 				  if(pd->TimeIntegration!=STEADY) */
+      /* 				    { */
+      /* 				      if(pd->e[eqn] & T_MASS) */
+      /* 					{ */
+      /* 				  	  mass  = exp_s_dot[a][b]; */
+      /* 				  	  mass *= wt_func *d_at_dT[j]*det_J*wt*h3; */
+      /* 				  	  mass *= pd->etm[eqn][(LOG2_MASS)]; */
+      /* 					} */
+      /* 				    } */
+				  
+      /* 				  advection = 0.0; */
+      /* 				  if(pd->e[eqn] & T_ADVECTION) */
+      /* 				    { */
+      /* 				      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b]; */
+      /* 				      advection -= g_dot_exp_s[a][b] + exp_s_dot_gt[a][b]; */
+				      
+      /* 				      advection *= wt_func*d_at_dT[j]*det_J*wt*h3; */
+      /* 				      advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 				    }      */
+				  
+      /* 				  lec->J[peqn][pvar][i][j] += mass + advection; */
+      /* 				} */
+      /* 			    }	       */
+			  
+      /* 			  //J_v */
+      /* 			  for(p=0; p<dim; p++) */
+      /* 			    { */
+      /* 			      var = VELOCITY1+p; */
+      /* 			      if(pd->v[var]) */
+      /* 				{ */
+      /* 				  pvar = upd->vp[var]; */
+      /* 				  for(j=0; j<ei->dof[var]; j++) */
+      /* 				    { */
+      /* 				      phi_j = bf[var]->phi[j]; */
+				      
+      /* 				      mass = 0.0; */
+      /* 				      if(pd->TimeIntegration!=STEADY) */
+      /* 					{ */
+      /* 					  if(pd->e[eqn] & T_MASS) */
+      /* 					    { */
+      /* 					      if(supg!=0.0) */
+      /* 						{ */
+      /* 						  mass = supg*h_elem*phi_j*bf[eqn]->grad_phi[i][p];					   */
+      /* 						  for(w=0;w<dim;w++) */
+      /* 						    { */
+      /* 						      mass += supg*vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4.0 */
+      /* 							*v[w]*bf[eqn]->grad_phi[i][w]; */
+      /* 						    }						   */
+      /* 						  mass *=  exp_s_dot[a][b]*at*det_J*wt*h3; */
+      /* 						}					       */
+      /* 					      mass *= pd->etm[eqn][(LOG2_MASS)]; */
+      /* 					    }					   */
+      /* 					} */
+
+      /* 				      advection = 0.0; */
+      /* 				      if(pd->e[eqn] & T_ADVECTION) */
+      /* 					{ */
+      /* 					  advection_a  = phi_j*(grad_exp_s[p][a][b]);					   */
+      /* 					  advection_a *= wt_func; */
+      /* 					} */
+      /* 				      advection_b = 0.0; */
+      /* 				      if(supg !=0.) */
+      /* 					{					       */
+      /* 					  advection_b =  supg*h_elem*phi_j*bf[eqn]->grad_phi[i][p]; */
+      /* 					  for(w =0; w<dim; w++) */
+      /* 					    { */
+      /* 					      advection_b += supg*vcent[p]*h[p]*dvc_dnode[p][j]*h_elem_inv/4.0 */
+      /* 						*v[w]*bf[eqn]->grad_phi[i][w]; */
+      /* 					    }					       */
+      /* 					  advection_b *= R_advection; */
+      /* 					} */
+				      
+      /* 				      advection  = advection_a + advection_b; */
+      /* 				      advection *= at*det_J*wt*h3; */
+      /* 				      advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+
+
+      /* 				      source = 0.0;				       */
+      /* 				      if(pd->e[eqn] & T_SOURCE) */
+      /* 					{ */
+      /* 					  if(supg!=0.0) */
+      /* 					    { */
+      /* 					      source = supg*h_elem*phi_j*bf[eqn]->grad_phi[i][p];				       */
+      /* 					      for(w=0;w<dim;w++) */
+      /* 						{ */
+      /* 						  source += supg*vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4.0 */
+      /* 						    *v[w]*bf[eqn]->grad_phi[i][w]; */
+      /* 						}					       */
+      /* 					      source *= R_source; */
+      /* 					    }					   */
+      /* 					  source *= det_J*wt*h3; */
+      /* 					  source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+      /* 					}				   */
+      /* 				      lec->J[peqn][pvar][i][j] += mass + advection + source; */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
+			  
+      /* 			  //J_d */
+      /* 			  for(p=0; p<dim; p++) */
+      /* 			    { */
+      /* 			      var = MESH_DISPLACEMENT1+p; */
+      /* 			      if(pd->v[var]) */
+      /* 				{ */
+      /* 				  pvar = upd->vp[var]; */
+      /* 				  for(j=0; j<ei->dof[var]; j++) */
+      /* 				    { */
+      /* 				      phi_j = bf[var]->phi[j]; */
+      /* 				      d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j]; */
+      /* 				      dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j]; */
+				      
+      /* 				      if(supg!=0.0) */
+      /* 					{ */
+      /* 					  h_elem_deriv = 0.0; */
+      /* 					  for(q=0; q<dim; q++) */
+      /* 					    { */
+      /* 					      h_elem_deriv += hh[q][p]*vcent[q]*vcent[q]*dh_dxnode[q][j]*h_elem_inv/4.0; */
+      /* 					    }  */
+      /* 					} */
+
+      /* 				      mass   = 0.0; */
+      /* 				      mass_a = 0.0; */
+      /* 				      mass_b = 0.0; */
+      /* 				      if(pd->TimeIntegration!=STEADY) */
+      /* 					{ */
+      /* 					  if(pd->e[eqn] & T_MASS) */
+      /* 					    { */
+      /* 					      mass_a  = exp_s_dot[a][b]; */
+      /* 					      mass_a *= wt_func*(d_det_J_dmesh_pj*h3 + det_J*dh3dmesh_pj); */
+					      
+      /* 					      if(supg!= 0.0) */
+      /* 						{ */
+      /* 						  for(w=0; w<dim; w++) */
+      /* 						    { */
+      /* 						      mass_b += supg*(h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w][p][j] */
+      /* 								      + h_elem_deriv*v[w]*bf[eqn]->grad_phi[i][w]); */
+      /* 						    } */
+      /* 						  mass_b *= exp_s_dot[a][b]*h3*det_J; */
+      /* 						} */
+					      
+      /* 					      mass  = mass_a + mass_b; */
+      /* 					      mass *= at*wt*pd->etm[eqn][(LOG2_MASS)]; */
+      /* 					    } */
+      /* 					} */
+
+      /* 				      advection = 0.0;				       */
+      /* 				      if(pd->e[eqn] & T_ADVECTION) */
+      /* 					{ */
+      /* 					  advection_a  = R_advection;					   */
+      /* 					  advection_a *= wt_func*(d_det_J_dmesh_pj*h3 + det_J*dh3dmesh_pj); */
+					 
+      /* 					  d_vdotdels_dm = 0.0; */
+      /* 					  for(q=0; q<dim; q++) */
+      /* 					    { */
+      /* 					      for(k=0; k<VIM; k++) */
+      /* 						{ */
+      /* 						  for(l=0; l<VIM; l++) */
+      /* 						    { */
+      /* 						      d_vdotdelexps_dm += d_exp_s_ds[a][b][k][l]*(v[q]-x_dot[q]) */
+      /* 							*d_grad_s_dmesh[q][k][l][p][j]; */
+      /* 						    } */
+      /* 						} */
+      /* 					    } */
+      /* 					  advection_b = d_vdotdelexps_dm; */
+					  
+      /* 					  if(pd->TimeIntegration!=STEADY) */
+      /* 					    { */
+      /* 					      if(pd->e[eqn] & T_MASS) */
+      /* 						{ */
+      /* 						  d_xdotdelexps_dm = (1.+2.*tt)*phi_j/dt*grad_exp_s[p][a][b]; */
+      /* 						  advection_b  -= d_xdotdels_dm;						   */
+      /* 						} */
+      /* 					    } */
+      /* 					  advection_b *= wt_func*det_J*h3; */
+
+      /* 					  advection_c = 0.0;	 */
+      /* 					  if(supg!=0.0) */
+      /* 					    { */
+      /* 					      for(w=0; w<dim; w++) */
+      /* 						{ */
+      /* 						  advection_c+= supg*(h_elem*v[w]*bf[eqn]->d_grad_phi_dmesh[i][w][p][j] */
+      /* 								      + h_elem_deriv*v[w]*bf[eqn]->grad_phi[i][w]); */
+      /* 						}					       */
+      /* 					      advection_c *= R_advection*det_J*h3; */
+      /* 					    } */
+					  
+      /* 					  advection  = advection_a + advection_b + advection_c; */
+      /* 					  advection *=  wt*at*pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 					} */
+				      
+				      
+      /* 				      source = 0.0; */
+      /* 				      if(pd->e[eqn] & T_SOURCE) */
+      /* 					{ */
+      /* 					  source_a  = R_source;					   */
+      /* 					  source_a *= wt_func*(d_det_J_dmesh_pj*h3 + det_J*dh3dmesh_pj); */
+					  
+      /* 					  source_b = 0.0; */
+      /* 					  if(supg!=0.0) */
+      /* 					    { */
+      /* 					      for(w=0;w<dim;w++) */
+      /* 						{ */
+      /* 						  source_b+= supg*(h_elem*v[w]*bf[eqn]->d_grad_phi_dmesh[i][w][p][j] */
+      /* 								     + h_elem_deriv*v[w]*bf[eqn]->grad_phi[i][w]);  */
+      /* 						} */
+      /* 					      source_b *= R_source*det_J*h3; */
+      /* 					    } */
+					  
+      /* 					  source  = source_a + source_b;					   */
+      /* 					  source *=  wt*pd->etm[eqn][(LOG2_SOURCE)];				       */
+      /* 					} */
+				      
+      /* 				      lec->J[peqn][pvar][i][j] += mass + advection + source; */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
+			  
+      /* 			  //J_G */
+      /* 			  for(p=0; p<VIM; p++) */
+      /* 			    { */
+      /* 			      for(q=0; q<VIM; q++) */
+      /* 				{ */
+      /* 				  var = v_g[p][q]; */
+				  
+      /* 				  if(pd->v[var]) */
+      /* 				    { */
+      /* 				      pvar = upd->vp[var]; */
+
+      /* 				      for(j=0; j<ei->dof[var]; j++) */
+      /* 					{ */
+      /* 					  phi_j = bf[var]->phi[j]; */
+
+      /* 					  advection = 0.0; */
+      /* 					  if(pd->e[eqn] & T_ADVECTION) */
+      /* 					    { */
+      /* 					      advection -= exp_s[a][q]*(double)delta(p,b) +exp_s[q][b]*(double)delta(a,p); */
+      /* 					      advection *= phi_j*h3*det_J; */
+      /* 					      advection *= wt_func*wt*at*pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 					    } */
+      /* 					} */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
+			  
+      /* 			  //J_S */
+      /* 			  for(p=0; p<VIM; p++) */
+      /* 			    { */
+      /* 			      for(q=0; q<VIM; q++) */
+      /* 				{ */
+      /* 				  var = v_s[mode][p][q]; */
+				  
+      /* 				  if(pd->v[var]) */
+      /* 				    { */
+      /* 				      pvar = upd->vp[var]; */
+      /* 				      for(j=0; j<ei->dof[var]; j++) */
+      /* 					{ */
+      /* 					  phi_j = bf[var]->phi[j]; */
+
+      /* 					  mass = 0.0; */
+      /* 					  if(pd->TimeIntegration != STEADY) */
+      /* 					    { */
+      /* 					      if(pd->e[eqn] & T_MASS) */
+      /* 						{ */
+      /* 						  //Need second order terms d/ds^2{e^s}, for d/ds{d/dt(e^s)} */
+      /* 						  mass *= h3*det_J; */
+      /* 						  mass *= wt_func*at*wt*pd->etm[eqn][(LOG2_MASS)]; */
+      /* 						} */
+      /* 					    } */
+
+      /* 					  advection  = 0.0;					   */
+      /* 					  if(pd->e[eqn] & T_ADVECTION) */
+      /* 					    {					       */
+					      
+      /* 					      //Need second order terms d/ds^2{e^s}, for d/ds{u*grad(e^s)} */
+					      
+      /* 					      for(k=0; k<VIM; k++) */
+      /* 						{ */
+      /* 						  advection -= g[a][k]*d_exp_s_ds[k][b][p][q] + d_exp_s_ds[a][k][p][q]*gt[k][b]; */
+      /* 						} */
+					    
+      /* 					      advection *= h3*det_J*phi_j;					       */
+      /* 					      advection *= wt_func*wt*at*pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 					    } */
+
+      /* 					  source = 0.0;		      				   */
+      /* 					  if(pd->e[eqn] & T_SOURCE) */
+      /* 					    { */
+					      
+      /* 					      source_a = Z/lambda*d_exp_s_ds[a][b][p][q];					       */
+      /* 					      if(a==b) */
+      /* 						{ */
+      /* 						  source_a -= Z/lambda; */
+      /* 						} */
+					      
+      /* 					      if(alpha!=0.0) */
+      /* 						{ */
+      /* 						  source_b = exp_s_dot_exp_s[a][b] - 2.0*exp_s[a][b]; */
+      /* 						  if(a==b) */
+      /* 						    { */
+      /* 						      source1 += 1.0; */
+      /* 						    } */
+      /* 						  source1 *= alpha/lambda; */
+      /* 						} */
+
+      /* 					      source  = source_a + source_b; */
+      /* 					      source *= phi_j*det_J*h3; */
+      /* 					      source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)]; */
+      /* 					    }					       */
+
+
+      /* 					  lec->J[peqn][pvar][i][j] += mass + advection + source;				     */
+      /* 					} */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
+			  
+      /* 			}//for i */
+      /* 		    }//if a<=b */
+      /* 		}//for b */
+      /* 	    }//for a	   */
+      /* 	} *///Assemble_Jacobian
+      
+      
+    }
+  return(status);
+}
+
+int 
+assemble_stress_map_log_conf(dbl tt,	 
+		     dbl dt,	              
+		     dbl h[DIM], 
+		     dbl hh[DIM][DIM], 
+		     dbl dh_dxnode[DIM][MDE],
+		     dbl vcent[DIM], 
+		     dbl dvc_dnode[DIM][MDE])
+{
+  int dim, p, q, r, a, b, w;
+  int eqn, var;
+  int peqn, pvar;
+
+  int i, j, k, l, m, status, mode;
+  dbl v[DIM];			       
+  dbl x_dot[DIM];	      
+  dbl h3;		        
+  dbl dh3dmesh_pj;	        
+
+  dbl grad_v[DIM][DIM];
+  dbl gamma[DIM][DIM];                
+  dbl det_J;                            
+  dbl d_det_J_dmesh_pj; 
+
+  dbl mass;			        
+  dbl mass_a, mass_b;
+  dbl advection;	
+  dbl advection_a, advection_b, advection_c, advection_d;
+  dbl source;
+  dbl source1;
+  dbl source_a=0, source_b=0;
+
+  dbl wt_func;
+  dbl phi_j;
+  dbl wt;
+
+  //Variables for stress, velocity gradient
+  int R_s[MAX_MODES][DIM][DIM]; 
+  int v_s[MAX_MODES][DIM][DIM]; 
+  int v_g[DIM][DIM]; 
+  dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];        
+  dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
+  dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM];
+  dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
+  int use_G=0;
+  dbl g[DIM][DIM];       
+  dbl gt[DIM][DIM];        
+
+
+  //Tensors for dot products
+  dbl s_dot_s[DIM][DIM]; 
+  dbl s_dot_g[DIM][DIM];
+  dbl g_dot_s[DIM][DIM];
+  dbl s_dot_gt[DIM][DIM];
+  dbl gt_dot_s[DIM][DIM];
+  dbl exp_s_dot_exp_s[DIM][DIM]; 
+  dbl exp_s_dot_g[DIM][DIM];
+  dbl g_dot_exp_s[DIM][DIM];
+  dbl exp_s_dot_gt[DIM][DIM];
+  dbl gt_dot_exp_s[DIM][DIM];
+
+  //Polymer viscosity
+  dbl mup;
+  VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+
+  //Temperature shift
+  dbl at = 0.0;
+  dbl d_at_dT[MDE];
+  dbl wlf_denom;
+
+  //Consitutive prameters
+  dbl alpha;     
+  dbl lambda=0;    
+  dbl ucwt, lcwt;
+  dbl eps;      
+  dbl Z=1.0;        
+  dbl dZ_dtrace =0.0;
+
+  //Advective terms
+  dbl v_dot_del_s[DIM][DIM];
+  dbl x_dot_del_s[DIM][DIM];
+  dbl d_xdotdels_dm;
+  dbl d_vdotdels_dm;
+  dbl v_dot_del_exp_s[DIM][DIM];
+  dbl x_dot_del_exp_s[DIM][DIM];
+  dbl d_xdotdelexps_dm;
+  dbl d_vdotdelexps_dm;
+
+
+  //Trace of stress
+  dbl trace=0.0; 
+
+  //SUPG terms
+  dbl h_elem=0, h_elem_inv=0, h_elem_deriv=0;
+  dbl supg=0;
+
+  status = 0;
+  eqn   = R_STRESS11;			
+  //Check if we are actually needed
+  if(!pd->e[eqn])
+    {
+      return(status);
+    }
+
+  dim   = pd->Num_Dim;
+  wt = fv->wt;
+  det_J = bf[eqn]->detJ;
+  h3 = fv->h3;		      
+
+  //Load pointers
+  (void) stress_eqn_pointer(v_s);
+  (void) stress_eqn_pointer(R_s);
+
+  if(vn->wt_funcModel == GALERKIN)
+    {
+      supg = 0.0;
+    }
+  else if( vn->wt_funcModel == SUPG)
+    {
+      supg = vn->wt_func;
+    }
+
+
+  if(supg!=0.0)
+    {
+      h_elem = 0.0;
+      for ( p=0; p<dim; p++)
+	{
+	  h_elem += vcent[p]*vcent[p]*h[p];
+	}
+      h_elem = sqrt(h_elem)/2.0;
+
+      if(h_elem==0.0) 
+	{
+	  h_elem_inv = 1.0;
+	}
+      else
+	{
+	  h_elem_inv = 1.0/h_elem;
+	}
+    }
+
+  //Shift factor
+  if(pd->e[TEMPERATURE])
+    {
+      if(vn->shiftModel == CONSTANT)
+	{
+	  at = vn->shift[0];
+	  for(j=0; j<ei->dof[TEMPERATURE]; j++)
+	    {
+	      d_at_dT[j]=0.;
+	    }
+	}
+      else if(vn->shiftModel == MODIFIED_WLF)
+	{
+	  wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
+	  if(wlf_denom!= 0.0)
+	    {
+	      at=exp(vn->shift[0]*(mp->reference[TEMPERATURE]-fv->T)/wlf_denom);
+	      for(j=0; j<ei->dof[TEMPERATURE]; j++)
+		{
+		  d_at_dT[j]= -at*vn->shift[0]*vn->shift[1]/(wlf_denom*wlf_denom)*bf[TEMPERATURE]->phi[j];
+		}
+	    }
+	  else
+	    { 
+	      at = 1.0;
+	    } 
+	  for(j=0; j<ei->dof[TEMPERATURE]; j++)
+	    {
+	      d_at_dT[j] = 0.0;
+	    }
+	}
+    }
+  else
+    {
+      at = 1.0;
+    }
+
+  //Loop over modes
+  for(mode=0; mode<vn->modes; mode++)
+    {
+      //Load up constants and some pointers
+      load_modal_pointers_log_conf(mode, tt, dt, s, s_dot, grad_s);
+
+      //Polymer viscosity
+      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+
+      //Giesekus mobility parameter
+      alpha = ve[mode]->alpha;
+      
+      //Polymer time constant
+      if(ve[mode]->time_constModel == CONSTANT)
+	{
+	  lambda = ve[mode]->time_const;
+	}
+      else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
+	{
+	  lambda = mup/ve[mode]->time_const;
+	}
+      //PTT exponent
+      eps  = ve[mode]->eps;
+
+
+      //Use the analytic Jacobian for d/ds(e^s) in 2d (Kane et al. 2009)
+      if(VIM==2)
+	{	  
+	  //Compute d/ds(e^s)
+	  //log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+	  compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
+	  
+	}
+      //Use finite difference Jacobian for d/ds(e^2) in cylindrical and 3d
+      else
+	{
+	   EH(-1, "The log-conformation isn't ready for 3d or cylindrical problems yet.  You could fix that by implementing some finite differences.");
+
+
+	}
+
+
+
+      //If you need more terms, this would be a good place to compute before entering the residual assembly
+
+      
+      if(af->Assemble_Residual)
+	{
+	  for(a=0; a<VIM; a++)
+	    {
+	      for(b=0; b<VIM; b++)
+		{		  
+		  if(a<=b)
+		    {
+		      eqn = R_s[mode][a][b];
+
+		      for(i=0; i<ei->dof[eqn]; i++)
+			{
+			  wt_func = bf[eqn]->phi[i];
+			  
+			  source = 0.0;
+			  if(pd->e[eqn] & T_SOURCE)
+			    {
+			      source +=  fv->S[mode][a][b] - ((mup/lambda)*exp_s[a][b] - delta(a,b));
+			      source *= wt_func*det_J*h3*wt;			      
+			      source *= pd->etm[eqn][(LOG2_SOURCE)];
+			    }
+
+			  lec->R[upd->ep[eqn]][i] += source;
 			}//i loop
 		    }//if a<=b
 		}// b loop
@@ -5434,6 +6084,48 @@ load_modal_pointers(int ve_mode, /* mode number */
 
 }
 
+void 
+load_modal_pointers_log_conf(int ve_mode, /* mode number */
+			     dbl tt,
+			     dbl dt,
+			     dbl log_c[DIM][DIM], /* stress tensor for mode ve_mode */
+			     dbl log_c_dot[DIM][DIM], /* stress tensor time derivative for mode ve_mode */
+			     dbl grad_log_c[DIM][DIM][DIM]) /* grad of stress tensor for mode ve_mode */
+
+
+{
+  int a,b,p,q;			/* indeces for dimensions */
+  int j;			/* indeces for dofs */
+  int var;
+  int siz;
+
+  /* load up things we need in the assembly routine for each mode in turn*/
+
+  /* put stress in a nice working array */
+  
+  for (a = 0; a < VIM; a++) {
+    for (b = 0; b < VIM; b++) {
+      log_c[a][b] = fv->log_c[ve_mode][a][b];	  
+      if (pd->TimeIntegration != STEADY)  {
+	log_c_dot[a][b] = fv_dot->log_c[ve_mode][a][b];
+      } else {
+	log_c_dot[a][b] = 0.;
+      }
+    }
+  } 
+  
+  for ( p=0; p<VIM; p++)
+    {
+      for ( a=0; a<VIM; a++)
+	{
+	  for ( b=0; b<VIM; b++)
+	    {
+	      grad_log_c[p][a][b] = fv->grad_log_c[ve_mode][p][a][b];
+	    }
+	}
+    } 
+}
+
 
 /******************************************************************************/
 /* END of routine modal_esp_alloc */
@@ -7104,18 +7796,6 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   //d/ds22{e^s22}
   d_exp_s_ds[1][1][1][1] = (2*a2*inva1cubed) * ((pow(a-c, 3) + 4*b*b*((a-c) - 1))*a3 - a1 * (pow(a-c, 2) + 2*b*b) * a4);
 }
-
-/*
- * This routine is to compute the terms d/ds(e^s) for the log conformation
- * Finite differences are needed as there is no general analytic expression for 3d
- */
-void
-log_conf_jac_FD(dbl s[DIM][DIM],                   //s - stress
-		dbl d_exp_s_ds[DIM][DIM][DIM][DIM])//d_exp_s_ds - derivative of e^s wrt s
-{
-  
-}
-
 
 /*****************************************************************************/
 /* END OF FILE mm_fill_stress.c */

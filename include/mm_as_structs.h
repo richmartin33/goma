@@ -465,6 +465,7 @@ struct Element_Variable_Pointers
 					     for annealing */
   dbl *P[MDE];					/* pressure */
   dbl *S[MAX_MODES][DIM][DIM][MDE];	        /* polymeric stress tensor, for each mode */
+  dbl *log_c[MAX_MODES][DIM][DIM][MDE];	        /* log conformation tensor */
   dbl *G[DIM][DIM][MDE];	                /* velocity gradient tensor */
   dbl *F[MDE];					/* Fill */
   dbl *V[MDE];                                  /* Potential; added by KSC: 2/3/99 */
@@ -567,6 +568,9 @@ struct Element_Stiffness_Pointers
   dbl **P;		         /* *P[MDE], pressure */
   dbl *****S;	                 /* *S[MAX_MODES][DIM][DIM][MDE], polymeric
 				    stress tensor */
+  dbl *****log_c;	         /* *log_c[MAX_MODES][DIM][DIM][MDE], log conf
+				    tensor */
+
   dbl ****G;	                 /* *G[DIM][DIM][MDE], velocity gradient
 				    tensor */
   dbl **V;		 	 /* *V[MDE], voltage potential */
@@ -1517,6 +1521,7 @@ struct Field_Variables
   dbl c[MAX_CONC];		/* Concentration(s). */
   dbl P;			/* Pressure. */
   dbl S[MAX_MODES][DIM][DIM];   /* Polymer Stress, for each mode */
+  dbl log_c[MAX_MODES][DIM][DIM];   /* log conformation tensor */
   dbl G[DIM][DIM];              /* Velocity Gradient */
   dbl F;			/* Fill */
   dbl V;			/* Voltage */
@@ -1657,6 +1662,7 @@ struct Field_Variables
    * grad_phi_e_e!
    */
   dbl grad_S[MAX_MODES][DIM][DIM][DIM];	/* Gradient of polymer stress tensor( or most of it!) */
+  dbl grad_log_c[MAX_MODES][DIM][DIM][DIM];	/* Gradient of log conformation tensor( or most of it!) */
   dbl div_S[MAX_MODES][DIM];	        /* Divergence of polymer stress tensor */
   dbl grad_G[DIM][DIM][DIM];	/* Gradient of velocity tensor ( or most of it!) */
   dbl div_G[DIM];	        /* Divergence of velocity gradient tensor */
@@ -1857,6 +1863,7 @@ struct Diet_Field_Variables
   dbl H;                        /* Curvature of Level Set function */
   dbl n[DIM];                   /* normal vector to level set field OR shell normal */
   dbl S[MAX_MODES][DIM][DIM];   /* Polymer Stress, for each modes */
+  dbl log_c[MAX_MODES][DIM][DIM];   /* log conformation tensor, for each modes */
   dbl G[DIM][DIM];              /* Velocity Gradient */
   dbl nn;		        /* This is the bond evolution */
   dbl p_liq;	        	/* porous media liq-pressure variable. */

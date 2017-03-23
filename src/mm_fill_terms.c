@@ -2770,8 +2770,7 @@ assemble_momentum(dbl time,       /* current time */
    */
   if(vn->evssModel==CONF    ||
      vn->evssModel==CONF_G  ||
-     vn->evssModel==CONF_EVSS ||
-     vn->evssModel==LOG_CONF)
+     vn->evssModel==CONF_EVSS)
     {
       fluid_stress_conf(Pi, d_Pi);
     }
@@ -7523,6 +7522,7 @@ load_fv(void)
   int mode;
   int status = 0;
   int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
+  int v_log_c[MAX_MODES][DIM][DIM];
   double rho, *stateVector = mp->StateVector;
   BASIS_FUNCTIONS_STRUCT *bfv;
   int transient_run = pd->TimeIntegration != STEADY ;
@@ -7547,7 +7547,19 @@ load_fv(void)
     v_g[2][1] = VELOCITY_GRADIENT32; 
     v_g[2][2] = VELOCITY_GRADIENT33; 
   }
-  
+
+  if( pdv[LOG_CONF11] ) {
+    v_log_c[0][0][0] = LOG_CONF11;
+    v_log_c[0][0][1] = LOG_CONF12;
+    v_log_c[0][0][2] = LOG_CONF13;
+    v_log_c[0][1][0] = LOG_CONF12;
+    v_log_c[0][1][1] = LOG_CONF22;
+    v_log_c[0][1][2] = LOG_CONF23;
+    v_log_c[0][2][0] = LOG_CONF13;
+    v_log_c[0][2][1] = LOG_CONF23;
+    v_log_c[0][2][2] = LOG_CONF33;
+  }
+
   /*
    * Since it is possible to have a 1D element in a 2D problem, 
    * (i.e. shell elements), use the problem dimension instead.
@@ -8540,6 +8552,59 @@ load_fv(void)
 		  fv->S[mode][q][p] = fv->S[mode][p][q];
 		  fv_old->S[mode][q][p] = fv_old->S[mode][p][q];
 		  fv_dot->S[mode][q][p] = fv_dot->S[mode][p][q];
+		}
+	    }
+	}
+    }
+
+    /*
+   * Polymer Stress (tensor)...
+   */
+  
+  for ( mode=0; pdv[LOG_CONF11] && mode<vn->modes; mode++)
+    {
+      for ( p=0; p<VIM; p++)
+	{
+	  for ( q=0; q<VIM; q++)
+	    {
+              v = v_log_c[mode][p][q];
+              if ( pdv[v] || (upd->vp[v] == -1) )
+		{
+		  /* good default behavior */
+		  fv->log_c[mode][p][q] = 0.;
+		  fv_old->log_c[mode][p][q] = 0.;
+		  fv_dot->log_c[mode][p][q] = 0.;
+                }
+            }
+        }
+    }
+  
+  for ( mode=0; pdv[LOG_CONF11] &&  mode<vn->modes; mode++)
+    {
+      for ( p=0; p<VIM; p++)
+	{
+	  for ( q=0; q<VIM; q++)
+	    {
+	      if( p <= q)
+		{
+		  v = v_log_c[mode][p][q];
+		  if ( pdv[v] )
+		    {
+		      dofs     = ei->dof[v];
+		      for ( i=0; i<dofs; i++)
+			{
+			  fv->log_c[mode][p][q] += *esp->log_c[mode][p][q][i] * bf[v]->phi[i];
+			  if ( pd->TimeIntegration != STEADY )
+			    {
+			      fv_old->log_c[mode][p][q] += *esp_old->log_c[mode][p][q][i] * bf[v]->phi[i];
+			      fv_dot->log_c[mode][p][q] += *esp_dot->log_c[mode][p][q][i] * bf[v]->phi[i];
+			    }
+			}
+		    }
+		  /* form the entire symmetric stress matrix for the momentum equation */
+		  fv->log_c[mode][q][p] = fv->log_c[mode][p][q];
+		  fv_old->log_c[mode][q][p] = fv_old->log_c[mode][p][q];
+		  fv_dot->log_c[mode][q][p] = fv_dot->log_c[mode][p][q];
 		}
 	    }
 	}
@@ -10015,7 +10080,58 @@ load_fv_grads(void)
 		  }
 	  }
   }
-  
+
+  if (pd->v[LOG_CONF11])
+    {  
+      v = LOG_CONF11;
+      dofs = ei->dof[v];
+      for ( mode=0; mode<vn->modes; mode++)
+	{
+	  for ( p=0; p<VIM; p++)
+	    {
+	      for ( q=0; q<VIM; q++)
+		{
+		  for ( r=0; r<VIM; r++)
+		    {
+		      fv->grad_log_c[mode][r][p][q]=0.;
+					  
+		      for ( i=0; i<dofs; i++)
+			{
+			  if(p<=q)
+			    {
+			      fv->grad_log_c[mode][r][p][q] += 
+				*esp->log_c[mode][p][q][i] * bf[v]->grad_phi[i][r] ;
+			    }
+			  else
+			    {
+			      fv->grad_log_c[mode][r][p][q] += 
+				*esp->log_c[mode][q][p][i] * bf[v]->grad_phi[i][r] ;
+			    }
+			}
+					  
+		    }
+		}
+	    }
+	}
+	  
+	  
+    } else if ( zero_unused_grads && upd->vp[POLYMER_STRESS11] == -1 )  {  
+    for ( mode=0; mode<vn->modes; mode++)
+      {
+	for ( p=0; p<VIM; p++)
+	  {
+	    fv->div_S[mode][p] = 0.0;
+	    for ( q=0; q<VIM; q++)
+	      {
+		for ( r=0; r<VIM; r++)
+		  {
+		    fv->grad_log_c[mode][r][p][q]=0.;
+		  }
+	      }
+	  }
+      }
+  }
+
   
   /*
    * grad(G)

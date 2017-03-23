@@ -1008,6 +1008,13 @@ struct Equation_Names EQ_Name[] = {
     { "R_LIGHT_INTM", "LIGHT_INTM", R_LIGHT_INTM},
     { "R_LIGHT_INTD", "LIGHT_INTD", R_LIGHT_INTD},  /*   184  */
 
+    { "R_LOG_CONF11", "LOGCONF11", R_LOG_CONF11 } ,  
+    { "R_LOG_CONF12", "LOGCONF12", R_LOG_CONF12 } ,  
+    { "R_LOG_CONF22", "LOGCONF22", R_LOG_CONF22 } , 
+    { "R_LOG_CONF13", "LOGCONF13", R_LOG_CONF13 } ,
+    { "R_LOG_CONF23", "LOGCONF23", R_LOG_CONF23 } ,
+    { "R_LOG_CONF33", "LOGCONF33", R_LOG_CONF33 } , /* 190 */
+
     /*
      *  Note -> these entries must remain until we get rid
      *          of putting the species unknowns after V_LAST
@@ -1059,6 +1066,7 @@ struct Equation_Names EQ_Name[] = {
     { "R_SOLID_NORMAL", "SN",  R_SOLID_NORMAL } ,
     { "R_SOLID_TANG1",  "ST1", R_SOLID_TANG1 } ,
     { "R_SOLID_TANG2",  "ST2", R_SOLID_TANG2 }         /* 223 */
+    
 };
 int Num_EQ_Names = sizeof(EQ_Name) / sizeof(struct Equation_Names);  
 
@@ -1280,8 +1288,15 @@ struct Equation_Names Var_Name[] =  {
     { "LIGHT_INTM", "INTM", LIGHT_INTM},
     { "LIGHT_INTD", "INTD", LIGHT_INTD},                     /* 184 */
 
+    { "LOG_CONF11", "LOG_CONF11", LOG_CONF11 } ,  
+    { "LOG_CONF12", "LOG_CONF12", LOG_CONF12 } ,  
+    { "LOG_CONF22", "LOG_CONF22", LOG_CONF22 } , 
+    { "LOG_CONF13", "LOG_CONF13", LOG_CONF13 } ,
+    { "LOG_CONF23", "LOG_CONF23", LOG_CONF23 } ,
+    { "LOG_CONF33", "LOG_CONF33", LOG_CONF33 } , /* 190 */
+    
     { "MESH_POSITION1", "X",  MESH_POSITION1 } ,
-    { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 186 */
+    { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 198 */
     { "MESH_POSITION3", "Z",  MESH_POSITION3 } ,
 
     { "VEL_NORM",       "VN", VEL_NORM } ,
@@ -1294,14 +1309,14 @@ struct Equation_Names Var_Name[] =  {
 
     { "D_X1_DT",   "XDOT", D_X1_DT } ,
     { "D_X2_DT",   "YDOT", D_X2_DT } ,
-    { "D_X3_DT",   "ZDOT", D_X3_DT } ,			/* 196 */
+    { "D_X3_DT",   "ZDOT", D_X3_DT } ,			/* 208 */
     { "D_S_DT",    "SDOT", D_S_DT } ,
 
     { "D_P_DT",    "PDOT", D_P_DT } ,
 
     { "SOLID_POSITION1", "X_RS",  SOLID_POSITION1 } ,  
     { "SOLID_POSITION2", "Y_RS",  SOLID_POSITION2 } ,
-    { "SOLID_POSITION3", "Z_RS",  SOLID_POSITION3 } 	/* 201 */
+    { "SOLID_POSITION3", "Z_RS",  SOLID_POSITION3 } 	/* 213 */
 };
 
 int Num_Var_Names = sizeof(Var_Name) / sizeof(struct Equation_Names);  
