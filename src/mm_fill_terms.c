@@ -28035,6 +28035,500 @@ fluid_stress( double Pi[DIM][DIM],
 	    }
 	}
     }
+
+  
+  /*
+   * Calculate the dilational viscosity, if necessary
+   */
+  if (mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
+    kappa = dil_viscosity(gn, gamma, mu, d_mu, d_dilMu);
+    kappa = 0.0;
+    kappaWipesMu = 0;
+  }
+
+  /* xxxxx HKM xxxx  -> operational point */
+  /*
+   *  tau_p[a][b] is the particle stress contribution, so
+   *              it's zero for non-particle cases
+   *  gamma[a][b] is the usual gradV + gradV_t term
+   *  delta(a,b) is a delta function
+   */
+  for ( a=0; a<VIM; a++)
+    {
+      for ( b=0; b<VIM; b++)
+        {
+          Pi[a][b]  = -P * (double)delta(a,b)
+	    + mu * gamma[a][b] - tau_p[a][b];
+        }
+
+      // Add in the diagonal contribution
+      if (!kappaWipesMu) {
+	Pi[a][a] -= (mu / 3.0 - 0.5 * kappa) * gamma[a][a];
+      }
+    }
+
+  if ( pd->v[POLYMER_STRESS11] )
+    {
+      for ( a=0; a<VIM; a++)
+        {
+          for ( b=0; b<VIM; b++)
+            {
+              Pi[a][b]  += - evss_f * (mu - mus) * gamma_cont[a][b]
+		+ s[a][b];
+            }
+        }
+    }
+
+  /*
+   * OK, FIND THE JACOBIAN
+   */
+  var = TEMPERATURE;
+  if ( d_Pi != NULL && pd->v[var] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( j=0; j<ei->dof[var]; j++)
+                {
+                  d_Pi->T[p][q][j] = d_mu->T[j] * gamma[p][q];
+                }
+            }
+        }
+      if (!kappaWipesMu) {
+	for (p = 0; p < VIM; p++) {
+	  for (j = 0; j < ei->dof[var]; j++) {
+	    d_Pi->T[p][p][j] -= (d_mu->T[j]/3.0 - 0.5 * d_dilMu->T[j]) * gamma[p][p];
+	  }
+	}
+      }
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( j=0; j<ei->dof[var]; j++)
+                    {
+                      d_Pi->T[p][q][j] -= evss_f * ( d_mu->T[j] - d_mus->T[j] )* gamma_cont[p][q];
+                    }
+                }
+	    }
+        }
+    }
+
+  var = BOND_EVOLUTION;
+  if ( d_Pi != NULL && pd->v[var] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( j=0; j<ei->dof[var]; j++)
+                {
+                  d_Pi->nn[p][q][j] = d_mu->nn[j] * gamma[p][q];
+                }
+            }
+        }
+      if (!kappaWipesMu) {
+	for (p = 0; p < VIM; p++) {
+	  for (j = 0; j < ei->dof[var]; j++) {
+	    d_Pi->nn[p][p][j] -= (d_mu->nn[j]/3.0 - 0.5 * d_dilMu->nn[j]) * gamma[p][p];
+	  }
+	}
+      }
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( j=0; j<ei->dof[var]; j++)
+                    {
+                      d_Pi->nn[p][q][j] -= evss_f * ( d_mu->nn[j] - d_mus->nn[j] )* gamma_cont[p][q];
+                    }
+                }
+	    }
+        }
+    }
+
+#ifdef COUPLED_FILL
+  var = FILL;
+  if ( d_Pi != NULL && pd->v[var] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( j=0; j<ei->dof[var]; j++)
+                {
+                  d_Pi->F[p][q][j] = d_mu->F[j] * gamma[p][q];
+                }
+            }
+        }
+      if (!kappaWipesMu) {
+	for (p = 0; p < VIM; p++) {
+	  for (j = 0; j < ei->dof[var]; j++) {
+	    d_Pi->F[p][p][j] -= (d_mu->F[j] / 3.0 - 0.5 * d_dilMu->F[j]) * gamma[p][p];
+	  }
+	}
+      }
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( j=0; j<ei->dof[var]; j++)
+                    {
+                      d_Pi->F[p][q][j] -= evss_f * ( d_mu->F[j] - d_mus->F[j] ) * gamma_cont[p][q];
+                    }
+                }
+	    }
+        }
+    }
+#endif /* COUPLED_FILL */
+
+  
+  if ( d_Pi != NULL && pd->v[PHASE1] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+	      for( a=0; a<pfd->num_phase_funcs; a++)
+		{
+		  var = PHASE1 + a;
+		  for( j=0 ; j<ei->dof[var] ; j++)
+		    {
+		      d_Pi->pf[p][q][a][j] = d_mu->pf[a][j]*gamma[p][q];
+		    }
+		}
+	    }
+	}
+      if (!kappaWipesMu) {
+	for (p = 0; p < VIM; p++) {
+	  for (a = 0; a < pfd->num_phase_funcs; a++) {
+	    var = PHASE1 + a;
+	    for (j = 0; j < ei->dof[var]; j++) {
+	      d_Pi->pf[p][p][a][j] -= (d_mu->pf[a][j]/3.0 - 0.5 * d_dilMu->pf[a][j]) * gamma[p][p];
+	    }
+	  }
+	}
+      }
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+		  for( a=0; a<pfd->num_phase_funcs; a++)
+		    {
+		      var = PHASE1 + a;
+		      for ( j=0; j<ei->dof[var]; j++)
+			{
+			  d_Pi->pf[p][q][a][j] -= evss_f * ( d_mu->pf[a][j] - d_mus->pf[a][j] ) * gamma_cont[p][q];
+			}
+		    }
+                }
+	    }
+        }
+
+    }
+
+
+
+  if ( d_Pi != NULL && pd->v[VELOCITY1] )
+    {
+      /* Damn... It is unfortunate that grad_phi_e is 1) assumed to be
+       * the same for all velocity components (this is bad for 3d
+       * stability of a 2d flow), and 2) there is no bf[] structure
+       * for the theta-velocity in cylindrical coordinates (I believe
+       * there is for swirling).  That's why this needed to be
+       * split... */
+      if(pd->CoordinateSystem != CYLINDRICAL) {
+        for ( p=0; p<VIM; p++)
+          {
+            for ( q=0; q<VIM; q++)
+              {
+                for ( b=0; b<wim; b++)
+                  {
+                    for ( j=0; j<ei->dof[VELOCITY1]; j++)
+                      {
+                        /* grad_phi_e cannot be the same for all
+                         * velocities for 3d stab of 2d flow!!
+                         * Compare with the old way in the CYLINDRICAL
+                         * chunk below... */
+                        d_Pi->v[p][q][b][j] =
+			  mu * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q] +
+				bf[VELOCITY1+p]->grad_phi_e[j][b][q][p] )
+                          + d_mu->v[b][j] * gamma[p][q]
+                          - d_tau_p_dv[p][q][b][j];
+                      }
+                  }
+              }
+	    if (!kappaWipesMu) {
+	      for (b = 0; b < wim; b++) {
+		for (j = 0; j < ei->dof[VELOCITY1]; j++) {
+		  d_Pi->v[p][p][b][j] -=
+		    ((2.0 * mu / 3.0 - kappa) * (bf[VELOCITY1+p]->grad_phi_e[j][b][p][p]) +
+		     (d_mu->v[b][j] / 3.0 - 0.5 * d_dilMu->v[b][j]) * gamma[p][p]);
+		}
+	      }
+	    }
+	  }
+      } else {
+	/* For CYLINDRICAL, we can assume that all of the velocity
+	 * components share the same interpolating basis function.
+	 * This was not allowable for 3d stability of 2d flow and
+	 * the PROJECTED_CARTESIAN coordinate system.  In fact, the
+	 * behavior above is "more" correct than this, so I
+	 * defaulted everyrthing else to it.
+	 */
+	grad_phi_e = bf[eqn]->grad_phi_e;
+	for ( p=0; p<VIM; p++) {
+	  for ( q=0; q<VIM; q++)
+	    {
+	      for ( b=0; b<wim; b++)
+		{
+		  for ( j=0; j<ei->dof[VELOCITY1]; j++)
+		    {
+		      d_Pi->v[p][q][b][j] =
+			mu * (grad_phi_e[j][b][p][q] + grad_phi_e[j][b][q][p])
+			+ d_mu->v[b][j] * gamma[p][q]
+			- d_tau_p_dv[p][q][b][j];
+		    }
+		}
+	    }
+	  if (!kappaWipesMu) {
+	    for (b = 0; b < wim; b++) {
+	      for (j = 0; j < ei->dof[VELOCITY1]; j++) {
+		d_Pi->v[p][p][b][j] -=
+		  ((2.0 * mu / 3.0 - kappa) * (grad_phi_e[j][b][p][p]) +
+		   (d_mu->v[b][j] / 3.0 - 0.5 * d_dilMu->v[b][j]) * gamma[p][p]);
+	      }
+	    }
+	  }
+	}
+      }
+
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( b=0; b<wim; b++)
+                    {
+                      for ( j=0; j<ei->dof[var]; j++)
+                        {
+                          d_Pi->v[p][q][b][j] -= evss_f * ( d_mu->v[b][j] - d_mus->v[b][j] ) * gamma_cont[p][q];
+                        }
+                    }
+                }
+	    }
+        }
+    }
+
+  // Vorticity direction dependence for qtensor
+  if ( d_Pi != NULL && pd->v[VORT_DIR1] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( b=0; b<dim; b++)
+                {
+                  for ( j=0; j<ei->dof[VORT_DIR1]; j++)
+                    {
+                      d_Pi->vd[p][q][b][j] = - d_tau_p_dvd[p][q][b][j];
+                    }
+                }
+            }
+	}
+    }
+
+  // Mesh Dependence
+  if ( d_Pi != NULL && pd->v[MESH_DISPLACEMENT1] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( b=0; b<dim; b++)
+                {
+                  for ( j=0; j<ei->dof[MESH_DISPLACEMENT1]; j++)
+                    {
+                      d_Pi->X[p][q][b][j] =
+			mu * ( fv->d_grad_v_dmesh[p][q] [b][j]
+                               + fv->d_grad_v_dmesh[q][p] [b][j] ) +
+                        + d_mu->X [b][j] * gamma[p][q] - d_tau_p_dmesh[p][q][b][j];
+                    }
+                }
+            }
+	  if (!kappaWipesMu) {   
+	    for (b = 0; b < dim; b++) {
+	      for (j = 0; j<ei->dof[MESH_DISPLACEMENT1]; j++) {
+		d_Pi->X[p][p][b][j] -=
+		  ((2.0 * mu /3.0 - kappa) * (fv->d_grad_v_dmesh[p][p][b][j]) +
+		   (d_mu->X[b][j] / 3.0 - 0.5 * d_dilMu->X[b][j]) * gamma[p][p]);
+	      }
+	    }    
+	  }
+	}
+      
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( b=0; b<dim; b++)
+                    {
+                      for ( j=0; j<ei->dof[MESH_DISPLACEMENT1]; j++)
+                        {
+                          d_Pi->X[p][q][b][j] -=
+			    evss_f * (d_mu->X [b][j] - d_mus->X [b][j]) * gamma_cont[p][q];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  if ( d_Pi != NULL && pd->v[POLYMER_STRESS11] )
+    {
+      for ( mode=0; mode<vn->modes; mode++)
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( b=0; b<VIM; b++)
+                    {
+                      for ( c=0; c<VIM; c++)
+                        {
+                          var = v_s[mode][b][c];
+                          for ( j=0; j<ei->dof[var]; j++)
+                            {
+                              d_Pi->S[p][q][mode][b][c][j] =
+				((double)delta(b,p) * (double)delta(c,q)) * bf[var]->phi[j]
+                                + mu_over_mu_num * d_mun_dS[mode][b][c][j] *
+				( gamma[p][q] - evss_f * gamma_cont[p][q] );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  if ( d_Pi != NULL && pd->v[VELOCITY_GRADIENT11] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( b=0; b<VIM; b++)
+                {
+                  for ( c=0; c<VIM; c++)
+                    {
+                      var = v_g[b][c];
+                      for ( j=0; j<ei->dof[var]; j++)
+                        {
+                          d_Pi->g[p][q][b][c][j] =
+			    mu_over_mu_num * d_mun_dG[b][c][j] *
+			    ( gamma[p][q] - evss_f * gamma_cont[p][q] )
+                            + evss_f *
+			    ( (mu - mus) * bf[var]->phi[j] *
+			      ((double)delta(c,p) * (double)delta(b,q) +
+			       (double)delta(b,p) * (double)delta(c,q)) );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  var = MASS_FRACTION;
+  if ( d_mu != NULL && pd->v[var] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for (w = 0; w < pd->Num_Species_Eqn; w++)
+                {
+                  for ( j=0; j<ei->dof[var]; j++)
+                    {
+                      d_Pi->C[p][q][w][j] = d_mu->C[w][j] * gamma[p][q]
+			- d_tau_p_dy[p][q][w][j];
+                    }
+                }
+            }
+	  if (!kappaWipesMu) {   
+	    for (w = 0; w < pd->Num_Species_Eqn; w++) {
+	      for (j = 0; j < ei->dof[var]; j++) {
+		d_Pi->C[p][p][w][j] -= (d_mu->C[w][j] /3.0 - 0.5 * d_dilMu->C[w][j]) * gamma[p][p];
+	      }
+	    }
+	  }    
+	}
+        
+
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( w=0; w<pd->Num_Species_Eqn; w++)
+                    {
+                      for ( j=0; j<ei->dof[var]; j++)
+                        {
+                          d_Pi->C[p][q][w][j] -=
+                            evss_f * ( d_mu->C[w][j] - d_mus->C[w][j] ) * gamma_cont[p][q];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  var = PRESSURE;
+  if ( d_Pi != NULL && pd->v[var] )
+    {
+      for ( p=0; p<VIM; p++)
+        {
+          for ( q=0; q<VIM; q++)
+            {
+              for ( j=0; j<ei->dof[var]; j++)
+                {
+                  d_Pi->P[p][q][j] =  - (double)delta(p,q) * bf[var]->phi[j]
+		    + d_mu->P[j] * gamma[p][q] - d_tau_p_dp[p][q][j];
+                }
+            }
+	  if (!kappaWipesMu) {
+	    for (j = 0; j < ei->dof[var]; j++) {
+	      d_Pi->P[p][p][j] -= (d_mu->P[j] /3.0 - 0.5 * d_dilMu->P[j]) * gamma[p][p];
+	    }
+	  }  
+        }
+
+      if ( pd->v[POLYMER_STRESS11] )
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( j=0; j<ei->dof[var]; j++)
+                    {
+                      d_Pi->P[p][q][j] -= evss_f * ( d_mu->P[j] - d_mus->P[j] )* gamma_cont[p][q];
+                    }
+                }
+	    }
+        }
+    }
 }
 
 /*
