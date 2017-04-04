@@ -3677,6 +3677,7 @@ assemble_stress_log_conf(dbl tt,
 				}
 			    } 
 
+			  advection = 0;
 			  if(pd->e[eqn] & T_ADVECTION)
  			    {  
 			      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b];
@@ -3688,10 +3689,10 @@ assemble_stress_log_conf(dbl tt,
 			  source = 0.0;
 			  if(pd->e[eqn] & T_SOURCE)
 			    {
-			      source +=  Z*exp_s[a][b]/lambda;
+			      source +=  exp_s[a][b]/lambda;
 			      if(a==b)
 				{
-				  source -= Z/lambda;
+				  source -= 1/lambda;
 				}
 
 			      if(alpha!=0.0)
@@ -4336,7 +4337,7 @@ assemble_stress_map_log_conf(dbl tt,
 			  source = 0.0;
 			  if(pd->e[eqn] & T_SOURCE)
 			    {
-			      source +=  fv->S[mode][a][b] - ((mup/lambda)*exp_s[a][b] - delta(a,b));
+			      source +=  fv->S[mode][a][b] - (mup/lambda)*(exp_s[a][b] - delta(a,b));
 			      source *= wt_func*det_J*h3*wt;			      
 			      source *= pd->etm[eqn][(LOG2_SOURCE)];
 			    }
@@ -7308,6 +7309,8 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 	  d_exp_s_ds[p][q][i][j] = (exp_s_p[p][q] - exp_s[p][q]) / ds;
 	}
       }
+
+      s_p[i][j] = s[i][j];
     }
   }
 }
