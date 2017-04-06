@@ -3632,7 +3632,7 @@ assemble_stress_log_conf(dbl tt,
 
 
       //Exponential term for PTT
-      Z = exp(eps*trace - (double) dim);
+      Z = exp(eps*(trace - (double) dim));
 
       //Compute some tensor dot products
       
