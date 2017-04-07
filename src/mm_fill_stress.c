@@ -3289,7 +3289,7 @@ assemble_stress_log_conf(dbl tt,
   int v_g[DIM][DIM]; 
   dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
-  dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM], grad_exp_s_app[DIM][DIM][DIM];;
+  dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM];
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
   int use_G=0;
   dbl g[DIM][DIM];       
@@ -3335,7 +3335,6 @@ assemble_stress_log_conf(dbl tt,
   dbl x_dot_del_exp_s[DIM][DIM];
   dbl d_xdotdelexps_dm;
   dbl d_vdotdelexps_dm;
-
 
   //Trace of stress
   dbl trace=0.0; 
@@ -3603,18 +3602,20 @@ assemble_stress_log_conf(dbl tt,
       	  trace += exp_s[a][a];
       	  for(b=0; b<VIM; b++)
       	    {
-      	      for(i=0; i<VIM; i++)
-      		{
-      		  for(j=0; j<VIM; j++)
-      		    {
-      		      for(q=0; q<dim; q++)
-      			{
-      			  grad_exp_s_app[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
+	      for(q=0; q<dim; q++)
+		{
+		  grad_exp_s[q][a][b] = 0;
+		  for(i=0; i<VIM; i++)
+		    {
+		      for(j=0; j<VIM; j++)
+			{
+      			  grad_exp_s[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
       			}
       		    }
-      		}
-      	    }
-      	}
+		}
+	    }
+	}
+
       
       for(a=0; a<VIM; a++)
       	{
@@ -3665,7 +3666,7 @@ assemble_stress_log_conf(dbl tt,
 				  wt_func += supg*h_elem*v[w]*bf[eqn]->grad_phi[i][w];
 				}
 			    }
-			  
+
 			  mass = 0.0;			  
 			  if(pd->TimeIntegration!=STEADY)
 			    {
@@ -6898,8 +6899,6 @@ compute_exp_s(double s[DIM][DIM],
   int M = VIM;
   int N = VIM;
   int LDA = N;
-  int LDU = M;
-  int LDVT = N;
 
   int INFO;
   int LWORK = 20;
@@ -6915,9 +6914,6 @@ compute_exp_s(double s[DIM][DIM],
       A[i*VIM + j] = s[j][i];
     }
   }
-
-
-  int test;
 
   double W[VIM];
 
