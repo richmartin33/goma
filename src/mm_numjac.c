@@ -259,9 +259,6 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
        * Perturb one variable at a time
        */
 
-      /* Only for stress terms */
-      if (idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33) continue;
-
       //      sprintf(errstring, "Computing J[:,%d] with respect to %s\n", j, Var_Name[idv[j][0]].name1);
       //      printf(errstring);
        
@@ -442,6 +439,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	  var_i = idv[i][0];
           var_j = idv[j][0];
           if (Inter_Mask[var_i][var_j]) {
+	    /* Only for stress terms */
+	    if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
+		(idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33)) continue;
 
 	    int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
 	    if (ja == -1) {

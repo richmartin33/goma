@@ -3371,10 +3371,8 @@ assemble_stress_log_conf(dbl tt,
   v_g[2][2] = VELOCITY_GRADIENT33; 
 
   
-  if(vn->evssModel==CONF_G || vn->evssModel==CONF_EVSS)
-    {
-      use_G = 1;
-    }
+  use_G = 1;
+
   
   //Load up field variables
   for(a=0; a<dim; a++)
@@ -3418,12 +3416,12 @@ assemble_stress_log_conf(dbl tt,
 	  if(use_G)
 	    {
 	      g[a][b]   = fv->G[a][b];
-	      gt[b][a]  = g[a][b];
+	      gt[a][b]  = g[b][a];
 	    }
 	  else
 	    {
-	      g[a][b]  = grad_v[b][a];
-	      gt[b][a] = grad_v[b][a];
+	      g[a][b]  = grad_v[a][b];
+	      gt[a][b] = grad_v[b][a];
 	    }
 	  
 	}
@@ -3709,7 +3707,6 @@ assemble_stress_log_conf(dbl tt,
 			      source *= wt_func*det_J*h3*wt;			      
 			      source *= pd->etm[eqn][(LOG2_SOURCE)];
 			    }
-
 			  lec->R[upd->ep[eqn]][i] += mass + advection + source;
 			}//i loop
 		    }//if a<=b
