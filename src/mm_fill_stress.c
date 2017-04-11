@@ -3290,6 +3290,7 @@ assemble_stress_log_conf(dbl tt,
   dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
   dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM], grad_exp_s_app[DIM][DIM][DIM];;
+  dbl exp_s2[DIM][DIM], d_exp_s_ds2[DIM][DIM][DIM][DIM];
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
   int use_G=0;
   dbl g[DIM][DIM];       
@@ -3526,7 +3527,7 @@ assemble_stress_log_conf(dbl tt,
       if(VIM==2)
 	{	  
 	  //Compute d/ds(e^s)
-	  //log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+	  log_conf_analytic_2D_with_jac(s, exp_s2, d_exp_s_ds2);
 	  compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
 	  
 	}
@@ -3609,7 +3610,7 @@ assemble_stress_log_conf(dbl tt,
       		    {
       		      for(q=0; q<dim; q++)
       			{
-      			  grad_exp_s_app[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
+      			  grad_exp_s[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
       			}
       		    }
       		}
@@ -6986,8 +6987,8 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 
   for (int i = 0; i < VIM; i++) {
     for (int j = 0; j < VIM; j++) {
-      s_p[i][j] = s[i][j];
-    }
+       s_p[i][j] = s[i][j];
+ }
   }
 
   for (int i = 0; i < VIM; i++) {
@@ -7000,6 +7001,10 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       // find exp_s at perturbed value
       compute_exp_s(s_p, exp_s_p);
 
+    //  if( i != j) {
+    //   s_p[j][i] = s_p[i][j];
+    //   }  
+
       // approximate derivative
       for (int p = 0; p < VIM; p++) {
 	for (int q = 0; q < VIM; q++) {
@@ -7008,6 +7013,11 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       }
 
       s_p[i][j] = s[i][j];
+      //if( i!=j )
+      //  {
+      //   s_p[j][i] = s[i][j]
+      //  }
+
     }
   }
 }
