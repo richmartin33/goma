@@ -6974,7 +6974,8 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 {
   double s_p[DIM][DIM];
   double exp_s_p[DIM][DIM];
-  
+  int m,n;
+ 
   compute_exp_s(s, exp_s);
 
   for (int i = 0; i < VIM; i++) {
@@ -6990,12 +6991,12 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       // perturb s
       s_p[i][j] += ds;
 
+      if( i != j) {
+        s_p[j][i] = s_p[i][j];
+      }
+
       // find exp_s at perturbed value
       compute_exp_s(s_p, exp_s_p);
-
-    //  if( i != j) {
-    //   s_p[j][i] = s_p[i][j];
-    //   }  
 
       // approximate derivative
       for (int p = 0; p < VIM; p++) {
@@ -7003,13 +7004,12 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 	  d_exp_s_ds[p][q][i][j] = (exp_s_p[p][q] - exp_s[p][q]) / ds;
 	}
       }
-
-      s_p[i][j] = s[i][j];
-      //if( i!=j )
-      //  {
-      //   s_p[j][i] = s[i][j]
-      //  }
-
+      
+      for (m = 0; m < VIM; m++) {
+        for (n=0; n < VIM; n++) {
+          s_p[m][n] = s[m][n];
+        }
+      }
     }
   }
 }
