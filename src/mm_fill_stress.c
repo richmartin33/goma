@@ -3425,7 +3425,7 @@ assemble_stress_log_conf(dbl tt,
       for(b=0; b<VIM; b++)
 	{
 	  g[a][b]   = fv->G[a][b];
-	  gt[a][b]  = g[b][a];
+	  gt[a][b]  = fv->G[b][a];
 	}
     }
   
