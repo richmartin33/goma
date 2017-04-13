@@ -212,4 +212,23 @@ EXTERN void log_conf_jac_FD
 PROTO((dbl [DIM][DIM],              //s -stress 
        dbl [DIM][DIM][DIM][DIM]));  //d_exp_s_ds - derivative of exp(s) wrt s
 
+
+EXTERN void 
+load_modal_pointers_log_conf(int ve_mode, /* mode number */
+			     dbl tt,
+			     dbl dt,
+			     dbl log_c[DIM][DIM], /* stress tensor for mode ve_mode */
+			     dbl log_c_dot[DIM][DIM], /* stress tensor time derivative for mode ve_mode */
+			     dbl grad_log_c[DIM][DIM][DIM]); /* grad of stress tensor for mode ve_mode */
+
+
+EXTERN void
+compute_exp_s(double s[DIM][DIM],
+	      double exp_s[DIM][DIM]);
+
+EXTERN void
+compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
+		   dbl exp_s[DIM][DIM],
+		   dbl d_exp_s_ds[DIM][DIM][DIM][DIM]);
+
 #endif /* _MM_FILL_STRESS_H */

@@ -5703,8 +5703,6 @@ load_modal_pointers_log_conf(int ve_mode, /* mode number */
 			     dbl log_c[DIM][DIM], /* stress tensor for mode ve_mode */
 			     dbl log_c_dot[DIM][DIM], /* stress tensor time derivative for mode ve_mode */
 			     dbl grad_log_c[DIM][DIM][DIM]) /* grad of stress tensor for mode ve_mode */
-
-
 {
   int a,b,p,q;			/* indeces for dimensions */
   int j;			/* indeces for dofs */
