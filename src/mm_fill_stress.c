@@ -5703,8 +5703,6 @@ load_modal_pointers_log_conf(int ve_mode, /* mode number */
 			     dbl log_c[DIM][DIM], /* stress tensor for mode ve_mode */
 			     dbl log_c_dot[DIM][DIM], /* stress tensor time derivative for mode ve_mode */
 			     dbl grad_log_c[DIM][DIM][DIM]) /* grad of stress tensor for mode ve_mode */
-
-
 {
   int a,b,p,q;			/* indeces for dimensions */
   int j;			/* indeces for dofs */
@@ -7273,7 +7271,8 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 {
   double s_p[DIM][DIM];
   double exp_s_p[DIM][DIM];
-  
+  memset(s_p, 0.0, sizeof(double)*DIM*DIM);
+  memset(exp_s_p, 0.0, sizeof(double)*DIM*DIM);
   compute_exp_s(s, exp_s);
 
   for (int i = 0; i < VIM; i++) {
@@ -7288,6 +7287,9 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 
       // perturb s
       s_p[i][j] += ds;
+      if (i != j) {
+	s_p[j][i] += ds;
+      }
 
       // find exp_s at perturbed value
       compute_exp_s(s_p, exp_s_p);
@@ -7300,6 +7302,9 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       }
 
       s_p[i][j] = s[i][j];
+      if (i != j) {
+	s_p[j][i] = s[i][j];
+      }
     }
   }
 }

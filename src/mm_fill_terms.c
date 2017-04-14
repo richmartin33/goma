@@ -27279,7 +27279,7 @@ fluid_stress( double Pi[DIM][DIM],
       particle_stress(tau_p, d_tau_p_dv, d_tau_p_dvd,d_tau_p_dy,d_tau_p_dmesh,d_tau_p_dp, w0);
     }
 
-  if ( pd->v[POLYMER_STRESS11] && (vn->evssModel == EVSS_F) )
+  if ( pd->v[POLYMER_STRESS11] && ((vn->evssModel == EVSS_F) || (vn->evssModel == LOG_CONF)) )
     {
       evss_f = 1.;
     }
