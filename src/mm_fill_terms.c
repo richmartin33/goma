@@ -4055,7 +4055,8 @@ assemble_momentum(dbl time,       /* current time */
 	       * J_m_G
 	       */
 		  
-	      if ( pdv[POLYMER_STRESS11] && (vn->evssModel==EVSS_F || vn->evssModel==CONF_EVSS || vn->evssModel==CONF_G) )
+	      if ( pdv[POLYMER_STRESS11] && (vn->evssModel==EVSS_F || vn->evssModel==CONF_EVSS ||
+					     vn->evssModel==CONF_G || vn->evssModel==LOG_CONF) )
 		{
 		  for ( b=0; b<VIM; b++)
 		    {
