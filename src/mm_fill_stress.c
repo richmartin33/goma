@@ -3621,12 +3621,12 @@ assemble_stress_log_conf(dbl tt,
 	}
 
       //Exponential term for PTT
-      Z = exp(eps*trace - (double) dim);
+      Z = exp(eps*(trace - (double) dim));
 
       //Compute some tensor dot products
       
-      (void) tensor_dot(exp_s, gt, exp_s_dot_gt, VIM);
-      (void) tensor_dot(g, exp_s, g_dot_exp_s, VIM);
+      (void) tensor_dot(exp_s, g, exp_s_dot_gt, VIM);
+      (void) tensor_dot(gt, exp_s, g_dot_exp_s, VIM);
       (void) tensor_dot(exp_s, exp_s, exp_s_dot_exp_s, VIM);
 
       //If you need more terms, this would be a good place to compute before entering the residual assembly
