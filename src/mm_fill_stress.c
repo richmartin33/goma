@@ -3371,8 +3371,6 @@ assemble_stress_log_conf(dbl tt,
   v_g[2][2] = VELOCITY_GRADIENT33; 
 
   
-  use_G = 1;
-
   
   //Load up field variables
   for(a=0; a<dim; a++)
@@ -3413,17 +3411,8 @@ assemble_stress_log_conf(dbl tt,
     {
       for(b=0; b<VIM; b++)
 	{
-	  if(use_G)
-	    {
-	      g[a][b]   = fv->G[a][b];
-	      gt[a][b]  = g[b][a];
-	    }
-	  else
-	    {
-	      g[a][b]  = grad_v[a][b];
-	      gt[a][b] = grad_v[b][a];
-	    }
-	  
+	  g[a][b]   = fv->G[a][b];
+	  gt[a][b]  = fv->G[b][a];
 	}
     }
   
@@ -3602,14 +3591,7 @@ assemble_stress_log_conf(dbl tt,
       	    {
 	      for(q=0; q<dim; q++)
 		{
-		  grad_exp_s[q][a][b] = 0;
-		  for(i=0; i<VIM; i++)
-		    {
-		      for(j=0; j<VIM; j++)
-			{
-      			  grad_exp_s[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
-      			}
-      		    }
+		  grad_exp_s[q][a][b] = fv->grad_exp_s[mode][q][a][b];
 		}
 	    }
 	}
@@ -3635,8 +3617,8 @@ assemble_stress_log_conf(dbl tt,
 
       //Compute some tensor dot products
       
-      (void) tensor_dot(exp_s, gt, exp_s_dot_gt, VIM);
-      (void) tensor_dot(g, exp_s, g_dot_exp_s, VIM);
+      (void) tensor_dot(exp_s, g, exp_s_dot_gt, VIM);
+      (void) tensor_dot(gt, exp_s, g_dot_exp_s, VIM);
       (void) tensor_dot(exp_s, exp_s, exp_s_dot_exp_s, VIM);
 
       //If you need more terms, this would be a good place to compute before entering the residual assembly
@@ -6990,6 +6972,9 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 
       // perturb s
       s_p[i][j] += ds;
+      if (i != j) {
+	s_p[j][i] += ds;
+      }
 
       if( i != j) {
         s_p[j][i] = s_p[i][j];
