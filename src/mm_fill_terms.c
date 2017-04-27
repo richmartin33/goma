@@ -10082,6 +10082,64 @@ load_fv_grads(void)
 	  }
   }
 
+  if (pd->v[POLYMER_STRESS11] && vn->evssModel == LOG_CONF)
+    {
+      v = POLYMER_STRESS11;
+      dofs = ei->dof[v];
+      for ( mode=0; mode<vn->modes; mode++)
+        {
+          for ( p=0; p<VIM; p++)
+            {
+              for ( q=0; q<VIM; q++)
+                {
+                  for ( r=0; r<VIM; r++)
+                    {
+                      fv->grad_exp_s[mode][r][p][q]=0.;
+
+                      for ( i=0; i<dofs; i++)
+                        {
+
+                          double s[DIM][DIM];
+                          double exp_s[DIM][DIM];
+
+                          for (a = 0; a < VIM; a++) {
+                            for (int b = 0; b < VIM; b++) {
+                              exp_s[a][b] = 0;
+                              if (a <= b) {
+                                s[a][b] = *esp->log_c[mode][a][b][i];
+                              } else {
+                                s[a][b] = *esp->log_c[mode][b][a][i];
+                              }
+                            }
+                          }
+
+                          compute_exp_s(s, exp_s);
+
+                          fv->grad_exp_s[mode][r][p][q] +=
+                            exp_s[p][q] * bf[v]->grad_phi[i][r] ;
+                        }
+                    }
+                }
+            }
+        }
+
+    } else if ( zero_unused_grads && upd->vp[POLYMER_STRESS11] == -1 )  {
+    for ( mode=0; mode<vn->modes; mode++)
+      {
+        for ( p=0; p<VIM; p++)
+          {
+            for ( q=0; q<VIM; q++)
+              {
+                for ( r=0; r<VIM; r++)
+                  {
+                    fv->grad_exp_s[mode][r][p][q]=0.;
+                  }
+              }
+          }
+      }
+  }
+
+
   if (pd->v[LOG_CONF11])
     {  
       v = LOG_CONF11;

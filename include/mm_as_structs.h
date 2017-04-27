@@ -1663,6 +1663,7 @@ struct Field_Variables
    */
   dbl grad_S[MAX_MODES][DIM][DIM][DIM];	/* Gradient of polymer stress tensor( or most of it!) */
   dbl grad_log_c[MAX_MODES][DIM][DIM][DIM];	/* Gradient of log conformation tensor( or most of it!) */
+  dbl grad_exp_s[MAX_MODES][DIM][DIM][DIM];
   dbl div_S[MAX_MODES][DIM];	        /* Divergence of polymer stress tensor */
   dbl grad_G[DIM][DIM][DIM];	/* Gradient of velocity tensor ( or most of it!) */
   dbl div_G[DIM];	        /* Divergence of velocity gradient tensor */

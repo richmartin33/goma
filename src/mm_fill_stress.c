@@ -3594,6 +3594,18 @@ assemble_stress_log_conf(dbl tt,
 	    }
 	}
 
+      for(a=0; a<VIM; a++)
+        {
+          for(b=0; b<VIM; b++)
+            {
+              for(q=0; q<VIM; q++)
+                {
+                  grad_exp_s[q][a][b] = fv->grad_exp_s[mode][q][a][b];
+                }
+            }
+        }
+
+
       //Predetermine advective terms
       trace = 0.0;
       
@@ -3605,17 +3617,8 @@ assemble_stress_log_conf(dbl tt,
 	      v_dot_del_exp_s[a][b] = 0.0;
 	      x_dot_del_exp_s[a][b] = 0.0;
 	      for (q=0; q < dim; q++) {
-		grad_exp_s[q][a][b] = 0;
-		for(i=0; i<VIM; i++)
-		  {
-		    for(j=0; j<VIM; j++)
-		      {
-			grad_exp_s[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
-			v_dot_del_exp_s[a][b] +=  d_exp_s_ds[a][b][i][j]*v[q]*grad_s[q][i][j];
-			x_dot_del_exp_s[a][b] +=  d_exp_s_ds[a][b][i][j]*x_dot[q]*grad_s[q][i][j];
-		
-		      }
-		  }
+	        v_dot_del_exp_s[a][b] +=  v[q]*grad_exp_s[q][a][b];
+		x_dot_del_exp_s[a][b] +=  x_dot[q]*grad_exp_s[q][a][b];
 	      }
 	    }
 	}
