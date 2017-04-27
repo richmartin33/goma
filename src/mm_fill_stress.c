@@ -3512,7 +3512,7 @@ assemble_stress_log_conf(dbl tt,
       if(VIM==2)
 	{	  
 	  //Compute d/ds(e^s)
-	  log_conf_analytic_2D_with_jac(s, exp_s2, d_exp_s_ds2);
+	  //log_conf_analytic_2D_with_jac(s, exp_s2, d_exp_s_ds2);
 	  compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
 	  
 	}
