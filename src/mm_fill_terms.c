@@ -4082,7 +4082,7 @@ assemble_momentum(dbl time,       /* current time */
 					{
 					  for ( q=0; q<VIM; q++)
 					    {
-					      diffusion -=
+					      diffusion +=
 						grad_phi_i_e_a[p][q] * d_Pi->g[q][p][b][c][j];
 					    }
 					}

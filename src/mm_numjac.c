@@ -154,6 +154,8 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   int count[MAX_VARIABLE_TYPES];
   double *nj;
   char errstring[256];
+  double *resid_vector_save;
+
 
   if(strcmp(Matrix_Format, "msr"))
     EH(-1, "Cannot compute numerical jacobian values for non-MSR formats.");
@@ -174,7 +176,10 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 
   nj = calloc(sizeof(double), ams->nnz);
   memcpy(nj, ams->val, ams->nnz*(sizeof(double)));
-  
+ 
+  resid_vector_save = (double *) array_alloc(1, NumUnknowns, sizeof(double));
+  memcpy(resid_vector_save, resid_vector, NumUnknowns*(sizeof(double)));
+ 
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
 
@@ -264,6 +269,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
      if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
 
       dx = x_scale[idv[j][0]] * FD_DELTA_UNKNOWN;
+      if(dx < 1.0E-15) dx = 1.0E-7;
       x_1[j] = x[j] + dx;
 
       num_elems = 0;
@@ -444,6 +450,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	      (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
 	      (idv[i][0] < LOG_CONF11 || idv[i][0] > LOG_CONF33)) continue;
 
+          /*if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
+              (idv[i][0] < LOG_CONF11 || idv[i][0] > LOG_CONF33)) continue;*/
+
           if (Inter_Mask[var_i][var_j]) {
 
 	    int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
@@ -465,9 +474,10 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       x_1[j] = x[j];
     }                          /* End of for (j=0; j<NumUnknowns; j++) */  
 
-  memcpy(ams->val, nj, ams->nnz*(sizeof(double)));
-  
+  memcpy(ams->val, nj, ams->nnz*(sizeof(double))); 
   free(nj);
+  memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double))); 
+  free(resid_vector_save);
   /* free arrays to hold jacobian and vector values */
   safe_free( (void *) irow) ;
   safe_free( (void *) jcolumn) ;

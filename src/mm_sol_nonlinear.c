@@ -97,6 +97,37 @@ static int first_linear_solver_call=TRUE;
 #include "mm_eh.h"
 
 
+
+void jacobian_print ( struct Aztec_Linear_Solver_System *ams, double resid_vector[])
+
+{
+  int i,j,m,n;
+  FILE *numjac_write;
+  FILE *numjac_idv, *resid_write;
+
+  numjac_write = fopen("numjac.out", "w");
+  numjac_idv = fopen("numjac_idv.out","w");
+  resid_write = fopen("resid.out","w");
+
+  for (i=0; i<NumUnknowns; i++)
+    {
+      fprintf(numjac_write,"%d %d %g\n", i, i, ams->val[i]);
+      fprintf(numjac_idv,"%d %d %d %d\n", i, i, idv[i][0], idv[i][0]);
+      fprintf(resid_write,"%d %g\n", i, resid_vector[i]);
+      for(j = ams->bindx[i]; j<ams->bindx[i+1]; j++)
+        {
+          fprintf(numjac_write,"%d %d %g\n", i, ams->bindx[j], ams->val[j]);
+          fprintf(numjac_idv,"%d %d %d %d\n", i, ams->bindx[j], idv[i][0], idv[ams->bindx[j]][0]);
+        }
+    }
+
+  fclose(numjac_write);
+  fclose(numjac_idv);
+  fclose(resid_write);
+
+} // End function jacobian_print
+
+
 /* EDW: This function invokes LOCA bordering algorithms as needed. */
 extern int continuation_hook
 PROTO((double *, double *, void *, double, double));
@@ -952,6 +983,10 @@ EH(-1,"version not compiled with frontal solver");
 				 Debug_Flag, time_value, exo, dpi,
 				 &h_elem_avg, &U_norm);
 
+              //jacobian_print(ams,resid_vector);
+
+              //exit(0);
+
 	      a_end = ut();
 	      if (err == -1) {
                 return_value = -1;
@@ -967,6 +1002,8 @@ EH(-1,"version not compiled with frontal solver");
 	      } else {
 		vector_scaling(NumUnknowns, resid_vector, scale);
 	      }
+              //jacobian_print(ams,resid_vector);
+              //exit(0);
 #ifdef DEBUG_MMHX    
               {
                 VARIABLE_DESCRIPTION_STRUCT *vd_eqn, *vd_var;
