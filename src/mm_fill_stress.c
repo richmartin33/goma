@@ -3304,8 +3304,6 @@ assemble_stress_log_conf(dbl tt,
   dbl gt_dot_s[DIM][DIM];
   dbl exp_s_dot_exp_s[DIM][DIM]; 
   dbl exp_s_dot_g[DIM][DIM];
-  dbl g_dot_exp_s[DIM][DIM];
-  dbl exp_s_dot_gt[DIM][DIM];
   dbl gt_dot_exp_s[DIM][DIM];
 
   //Polymer viscosity
@@ -3617,8 +3615,8 @@ assemble_stress_log_conf(dbl tt,
 
       //Compute some tensor dot products
       
-      (void) tensor_dot(exp_s, g, exp_s_dot_gt, VIM);
-      (void) tensor_dot(gt, exp_s, g_dot_exp_s, VIM);
+      (void) tensor_dot(exp_s, g, exp_s_dot_g, VIM);
+      (void) tensor_dot(gt, exp_s, gt_dot_exp_s, VIM);
       (void) tensor_dot(exp_s, exp_s, exp_s_dot_exp_s, VIM);
 
       //If you need more terms, this would be a good place to compute before entering the residual assembly
@@ -3662,7 +3660,7 @@ assemble_stress_log_conf(dbl tt,
 			  if(pd->e[eqn] & T_ADVECTION)
  			    {  
 			      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b];
-			      advection -= g_dot_exp_s[a][b] + exp_s_dot_gt[a][b];			      
+			      advection -= gt_dot_exp_s[a][b] + exp_s_dot_g[a][b];			      
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
@@ -3763,7 +3761,7 @@ assemble_stress_log_conf(dbl tt,
       /* 				  if(pd->e[eqn] & T_ADVECTION) */
       /* 				    { */
       /* 				      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b]; */
-      /* 				      advection -= g_dot_exp_s[a][b] + exp_s_dot_gt[a][b]; */
+      /* 				      advection -= gt_dot_exp_s[a][b] + exp_s_dot_g[a][b]; */
 				      
       /* 				      advection *= wt_func*d_at_dT[j]*det_J*wt*h3; */
       /* 				      advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
