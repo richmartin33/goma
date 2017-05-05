@@ -153,6 +153,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   double x_scale[MAX_VARIABLE_TYPES];
   int count[MAX_VARIABLE_TYPES];
   double *nj;
+  double *resid_vector_save
 
   char errstring[256];
 
@@ -176,6 +177,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   nj = calloc(sizeof(double), ams->nnz+1);
   memcpy(nj, ams->val, ams->nnz*(sizeof(double)));
   
+  resid_vector_save = (double*) array_alloc(1, NumUnknowns, sizeof(double));
+  memcpy(resid_vector_save, resid_vector, NumUnknowns*(sizeof(double)));
+
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
 
@@ -465,6 +469,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   memcpy(ams->val, nj, ams->nnz);
 
   free(nj);
+  memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double)));
+  free(resid_vector_save);
+
   /* free arrays to hold jacobian and vector values */
   safe_free( (void *) irow) ;
   safe_free( (void *) jcolumn) ;
