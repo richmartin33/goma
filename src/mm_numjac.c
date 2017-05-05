@@ -269,6 +269,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
      if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
 
       dx = x_scale[idv[j][0]] * FD_DELTA_UNKNOWN;
+      if(dx < 1.0E-15) dx = 1.0E-8);
       x_1[j] = x[j] + dx;
 
       num_elems = 0;
