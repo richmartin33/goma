@@ -153,7 +153,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   double x_scale[MAX_VARIABLE_TYPES];
   int count[MAX_VARIABLE_TYPES];
   double *nj;
-  double *resid_vector_save
+  double *resid_vector_save;
 
   char errstring[256];
 
@@ -269,7 +269,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
      if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
 
       dx = x_scale[idv[j][0]] * FD_DELTA_UNKNOWN;
-      if(dx < 1.0E-15) dx = 1.0E-8);
+      if(dx < 1.0E-15) dx = 1.0E-8;
       x_1[j] = x[j] + dx;
 
       num_elems = 0;
