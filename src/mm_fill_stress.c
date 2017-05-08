@@ -6970,10 +6970,6 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 
       // perturb s
       s_p[i][j] += ds;
-      if (i != j) {
-	s_p[j][i] += ds;
-      }
-
       if( i != j) {
         s_p[j][i] = s_p[i][j];
       }
