@@ -370,7 +370,7 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
     x[s_idx[1]] = log_s[0][1];
     x[s_idx[2]] = log_s[1][1];
 
-    printf("Node %d:\n", node);
+   /* printf("Node %d:\n", node);
 
     printf("C = [\n");
     for (int i = 0; i < 2; i++) {
@@ -388,7 +388,7 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
       }
       printf("\n");
     }
-    printf("]\n");
+    printf("]\n"); */
     
   }
 }
