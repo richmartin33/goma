@@ -154,7 +154,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   int count[MAX_VARIABLE_TYPES];
   double *nj;
   char errstring[256];
-  double *resid_vector_save;
+  //double *resid_vector_save;
 
 
   if(strcmp(Matrix_Format, "msr"))
@@ -177,8 +177,8 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   nj = calloc(sizeof(double), ams->nnz);
   memcpy(nj, ams->val, ams->nnz*(sizeof(double)));
  
-  resid_vector_save = (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  memcpy(resid_vector_save, resid_vector, NumUnknowns*(sizeof(double)));
+  //resid_vector_save = (double *) array_alloc(1, NumUnknowns, sizeof(double));
+  //memcpy(resid_vector_save, resid_vector, NumUnknowns*(sizeof(double)));
  
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
@@ -240,14 +240,14 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   af->Assemble_LSA_Jacobian_Matrix = FALSE;
   af->Assemble_LSA_Mass_Matrix = FALSE;
 
-  memset(resid_vector, 0, NumUnknowns*sizeof(dbl));
+  /*memset(resid_vector, 0, NumUnknowns*sizeof(dbl));
   (void) matrix_fill_full(ams, x, resid_vector, 
 			  x_old, x_older, xdot, xdot_old,x_update,
 			  &delta_t, &theta, 
 			  first_elem_side_BC_array,
 			  &time_value, exo, dpi, 
 			  &num_total_nodes, 
-			  h_elem_avg, U_norm, NULL); 
+			  h_elem_avg, U_norm, NULL);*/ 
 
 
 
@@ -476,8 +476,8 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 
   memcpy(ams->val, nj, ams->nnz*(sizeof(double))); 
   free(nj);
-  memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double))); 
-  free(resid_vector_save);
+  //memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double))); 
+  //free(resid_vector_save);
   /* free arrays to hold jacobian and vector values */
   safe_free( (void *) irow) ;
   safe_free( (void *) jcolumn) ;

@@ -4126,6 +4126,7 @@ assemble_stress_map_log_conf(dbl tt,
   int R_s[MAX_MODES][DIM][DIM]; 
   int v_s[MAX_MODES][DIM][DIM]; 
   int v_g[DIM][DIM]; 
+  int v_log_c[MAX_MODES][DIM][DIM];
   dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];        
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
   dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM];
@@ -4142,6 +4143,30 @@ assemble_stress_map_log_conf(dbl tt,
   dbl s_dot_gt[DIM][DIM];
   dbl gt_dot_s[DIM][DIM];
   dbl exp_s_dot_exp_s[DIM][DIM]; 
+
+  //Load pointers
+  (void) stress_eqn_pointer(v_s);
+  (void) stress_eqn_pointer(R_s);
+  
+  v_log_c[0][0][0] = LOG_CONF11;
+  v_log_c[0][0][1] = LOG_CONF12;
+  v_log_c[0][0][2] = LOG_CONF13;
+  v_log_c[0][1][0] = LOG_CONF12;
+  v_log_c[0][1][1] = LOG_CONF22;
+  v_log_c[0][1][2] = LOG_CONF23;
+  v_log_c[0][2][0] = LOG_CONF13;
+  v_log_c[0][2][1] = LOG_CONF23;
+  v_log_c[0][2][2] = LOG_CONF33;
+
+  v_g[0][0] = VELOCITY_GRADIENT11;
+  v_g[0][1] = VELOCITY_GRADIENT12;
+  v_g[1][0] = VELOCITY_GRADIENT21;
+  v_g[1][1] = VELOCITY_GRADIENT22;
+  v_g[0][2] = VELOCITY_GRADIENT13;
+  v_g[1][2] = VELOCITY_GRADIENT23;
+  v_g[2][0] = VELOCITY_GRADIENT31;
+  v_g[2][1] = VELOCITY_GRADIENT32; 
+  v_g[2][2] = VELOCITY_GRADIENT33; 
 
   //Polymer viscosity
   dbl mup;
@@ -4303,8 +4328,6 @@ assemble_stress_map_log_conf(dbl tt,
 
 	}
 
-
-
       
       if(af->Assemble_Residual)
 	{
@@ -4335,11 +4358,73 @@ assemble_stress_map_log_conf(dbl tt,
 	    }//a loop
 	}//if Residual
 
-      /* if(af->Assemble_Jacobian) */
-      /* 	{ */
-      
-      
-    }
+       if(af->Assemble_Jacobian) 
+       	{
+          for(a=0; a<VIM; a++)
+            {
+              for(b=0; b<VIM; b++)
+                {
+                  if(a<=b)
+                    {
+                      eqn = R_s[mode][a][b];
+ 
+                      for(i=0; i<ei->dof[eqn]; i++)
+                        {
+                          wt_func = bf[eqn]->phi[i];
+
+                          // J_map_S
+                          source = 0.0;
+                          for(p=0; p<VIM; p++)
+                            {
+                              for(q=0; q<VIM; q++)
+                                {
+                                  var = v_s[mode][p][q];
+                                  if(pd->v[var])
+                                    {
+                                      pvar = upd->vp[var];
+                                      for(j=0; j<ei->dof[var]; j++)
+                                        {
+                                          phi_j = bf[var]->phi[j]; 
+                                          source += (double)delta(a,p)*(double)delta(b,q);
+                                          source *= phi_j*det_J*h3;
+                                          source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
+                                        }
+                                  
+                                      lec-> J[peqn][pvar][i][j] += source;
+                                    }
+                                }
+                            }
+
+                          // J_map_log_c
+                          source = 0.0;
+                          for(p=0; p<VIM; p++) 
+                            {    
+                              for(q=0; q<VIM; q++) 
+                                {    
+                                  var = v_log_c[mode][p][q];
+                                  if(pd->v[var])
+                                    {    
+                                      pvar = upd->vp[var];
+                                      for(j=0; j<ei->dof[var]; j++) 
+                                        {    
+                                          phi_j = bf[var]->phi[j];
+                                          source -= d_exp_s_ds[a][b][p][q];
+                                          source *= phi_j*det_J*h3;
+                                          source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
+                                        }
+                                           
+                                      lec-> J[peqn][pvar][i][j] += source;
+                                    }    
+                                }    
+                            }    
+                          
+                          } // Loop over i
+                    } // if(a<=b)
+                } // loop over b
+            } // loop over a
+             
+    } // Assemble Jacobian
+  } // Loop over modes
   return(status);
 }
 
