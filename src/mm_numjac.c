@@ -73,7 +73,6 @@ typedef struct {
   int a_val, b_val;
   dbl c_val;
 } data_t;
-
 void 
 numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,	
 		   double x[],	/* Solution vector for the current processor */
@@ -153,9 +152,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   double x_scale[MAX_VARIABLE_TYPES];
   int count[MAX_VARIABLE_TYPES];
   double *nj;
+  char errstring[256];
   double *resid_vector_save;
 
-  char errstring[256];
 
   if(strcmp(Matrix_Format, "msr"))
     EH(-1, "Cannot compute numerical jacobian values for non-MSR formats.");
@@ -174,12 +173,12 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   dof_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
   elem_list = (int *)array_alloc(1, ELEM_LIST_SIZE, sizeof(int));
 
-  nj = calloc(sizeof(double), ams->nnz+1);
+  nj = calloc(sizeof(double), ams->nnz);
   memcpy(nj, ams->val, ams->nnz*(sizeof(double)));
-  
-  resid_vector_save = (double*) array_alloc(1, NumUnknowns, sizeof(double));
+ 
+  resid_vector_save = (double *) array_alloc(1, NumUnknowns, sizeof(double));
   memcpy(resid_vector_save, resid_vector, NumUnknowns*(sizeof(double)));
-
+ 
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
 
@@ -269,7 +268,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
      if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
 
       dx = x_scale[idv[j][0]] * FD_DELTA_UNKNOWN;
-      if(dx < 1.0E-15) dx = 1.0E-8;
+      if(dx < 1.0E-15) dx = 1.0E-7;
       x_1[j] = x[j] + dx;
 
       num_elems = 0;
@@ -443,10 +442,15 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
           i = dof_list[ii];
 	  var_i = idv[i][0];
           var_j = idv[j][0];
+
+	        /* Only for stress terms */
+	  if ((idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33) &&
+	      (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33)) continue;
+
+          /*if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
+              (idv[i][0] < LOG_CONF11 || idv[i][0] > LOG_CONF33)) continue;*/
+
           if (Inter_Mask[var_i][var_j]) {
-	    /* Only for stress terms */
-	    if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
-		(idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33)) continue;
 
 	    int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
 	    if (ja == -1) {
@@ -467,12 +471,10 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       x_1[j] = x[j];
     }                          /* End of for (j=0; j<NumUnknowns; j++) */  
 
-  memcpy(ams->val, nj, ams->nnz);
-
+  memcpy(ams->val, nj, ams->nnz*(sizeof(double))); 
   free(nj);
-  memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double)));
+  memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double))); 
   free(resid_vector_save);
-
   /* free arrays to hold jacobian and vector values */
   safe_free( (void *) irow) ;
   safe_free( (void *) jcolumn) ;
@@ -483,6 +485,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   safe_free( (void *) dof_list);
   safe_free( (void *) elem_list);
 }
+
 
 /*
  * Global variables defined here. Declared frequently via rf_bc.h
