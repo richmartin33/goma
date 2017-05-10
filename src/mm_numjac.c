@@ -154,30 +154,29 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   double *nj;
   char errstring[256];
   double *resid_vector_save;
-
-
+  int numProcUnknowns = NumUnknowns + NumExtUnknowns;
   if(strcmp(Matrix_Format, "msr"))
     EH(-1, "Cannot compute numerical jacobian values for non-MSR formats.");
 
 /* calculates the total number of non-zero entries in the analytical jacobian, a[] */ 
   nnonzero = NZeros+1;
-  nn = ija[NumUnknowns]-ija[0]; /* total number of diagonal entries a[] */
+  nn = ija[numProcUnknowns]-ija[0]; /* total number of diagonal entries a[] */
 
   /* allocate arrays to hold jacobian and vector values */
   irow = (int *) array_alloc(1, nnonzero, sizeof(int));
   jcolumn = (int *) array_alloc(1, nnonzero, sizeof(int));
   nelem = (int *) array_alloc(1, nnonzero, sizeof(int));
-  resid_vector_1 =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  x_1 =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  output_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
-  dof_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
+  resid_vector_1 =  (double *) array_alloc(1, numProcUnknowns, sizeof(double));
+  x_1 =  (double *) array_alloc(1, numProcUnknowns, sizeof(double));
+  output_list = (int *)array_alloc(1, numProcUnknowns, sizeof(int));
+  dof_list = (int *)array_alloc(1, numProcUnknowns, sizeof(int));
   elem_list = (int *)array_alloc(1, ELEM_LIST_SIZE, sizeof(int));
 
-  nj = calloc(sizeof(double), ams->nnz);
-  memcpy(nj, ams->val, ams->nnz*(sizeof(double)));
+  nj = calloc(sizeof(double), ams->bindx[numProcUnknowns]);
+  memcpy(nj, ams->val, ams->bindx[numProcUnknowns]*(sizeof(double)));
  
-  resid_vector_save = (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  memcpy(resid_vector_save, resid_vector, NumUnknowns*(sizeof(double)));
+  resid_vector_save = (double *) array_alloc(1, numProcUnknowns, sizeof(double));
+  memcpy(resid_vector_save, resid_vector, numProcUnknowns*(sizeof(double)));
  
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
@@ -191,7 +190,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
    * is to estimate the scale for all variables in the problem */
   memset(x_scale, 0, (MAX_VARIABLE_TYPES)*sizeof(dbl));
   memset(count, 0, (MAX_VARIABLE_TYPES)*sizeof(int));
-  for (i = 0; i < NumUnknowns; i++) 
+  for (i = 0; i < numProcUnknowns; i++) 
     {
       var_i = idv[i][0];
       count[var_i]++;
@@ -227,7 +226,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   if (ls != NULL && ls->Length_Scale != 0.) x_scale[FILL] = ls->Length_Scale;
     
   /* copy x vector */
-  for (i = 0; i < NumUnknowns; i++)
+  for (i = 0; i < numProcUnknowns; i++)
     {
       x_1[i] = x[i];
     }
@@ -239,7 +238,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   af->Assemble_LSA_Jacobian_Matrix = FALSE;
   af->Assemble_LSA_Mass_Matrix = FALSE;
 
-  memset(resid_vector, 0, NumUnknowns*sizeof(dbl));
+  memset(resid_vector, 0, numProcUnknowns*sizeof(dbl));
   (void) matrix_fill_full(ams, x, resid_vector, 
 			  x_old, x_older, xdot, xdot_old,x_update,
 			  &delta_t, &theta, 
@@ -256,7 +255,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
    *  check that the perturbed residuals are consistent with range possible
    *  for range of analytical jacobian values
    */
-  for (j = 0; j < NumUnknowns; j++)       /* loop over each column */  
+  for (j = 0; j < numProcUnknowns; j++)       /* loop over each column */  
     {
       /*
        * Perturb one variable at a time
@@ -274,7 +273,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       num_elems = 0;
       for(i = 0; i < ELEM_LIST_SIZE; i++)
 	elem_list[i] = 0;
-      for(i = 0; i < NumUnknowns; i++)
+      for(i = 0; i < numProcUnknowns; i++)
 	output_list[i] = FALSE;
       
       af->Assemble_Residual = TRUE;
@@ -364,7 +363,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       /* make compact list of Eqdof's that will be checked; put diagonal term first */
       dof_list[0] = j;
       num_dofs = 1;
-      for (i=0; i<NumUnknowns; i++)
+      for (i=0; i<numProcUnknowns; i++)
         {
           if (i!=j && output_list[i])
             {
@@ -373,7 +372,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
         }
           
       /* compute residual and Jacobian at perturbed soln */
-      memset(resid_vector_1, 0, NumUnknowns*sizeof(dbl));
+      memset(resid_vector_1, 0, numProcUnknowns*sizeof(dbl));
 
       if (pd_glob[0]->TimeIntegration != STEADY) {
 	xdot[j] += (x_1[j] - x[j])  * (1.0 + 2 * theta) / delta_t;
@@ -406,35 +405,6 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
        */
       global_qp_storage_destroy();
       
-#ifdef PARALLEL
-      neg_elem_volume_global = FALSE;
-      MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1,
-                     MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-      neg_elem_volume = neg_elem_volume_global;
-
-      neg_lub_height_global = FALSE;
-      MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1,
-                     MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-      neg_lub_height = neg_lub_height_global;
-
-      zero_detJ_global = FALSE;
-      MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1,
-                     MPI_INT, MPI_LOR, MPI_COMM_WORLD);
-      zero_detJ = zero_detJ_global;
-#endif
-
-      if (neg_elem_volume) {
-	DPRINTF(stderr, "neg_elem_volume triggered \n");
-	exit(-1);
-      }
-      if (neg_lub_height) {
-        DPRINTF(stderr, "neg_lub_height triggered \n");
-        exit(-1);
-      }
-      if (zero_detJ) {
-        DPRINTF(stderr, "zero_detJ triggered \n");
-        exit(-1);
-      }
       
       for (ii = 0; ii < num_dofs; ii++)
         {
@@ -469,11 +439,42 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	xdot[j] -= (x_1[j] - x[j])  * (1.0 + 2 * theta) / delta_t;
       }    
       x_1[j] = x[j];
-    }                          /* End of for (j=0; j<NumUnknowns; j++) */  
+    }                          /* End of for (j=0; j<numProcUnknowns; j++) */  
 
-  memcpy(ams->val, nj, ams->nnz*(sizeof(double))); 
+#ifdef PARALLEL
+  neg_elem_volume_global = FALSE;
+  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1,
+		MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  neg_elem_volume = neg_elem_volume_global;
+
+  neg_lub_height_global = FALSE;
+  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1,
+		MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  neg_lub_height = neg_lub_height_global;
+
+  zero_detJ_global = FALSE;
+  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1,
+		MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  zero_detJ = zero_detJ_global;
+#endif
+
+  if (neg_elem_volume) {
+    DPRINTF(stderr, "neg_elem_volume triggered \n");
+    exit(-1);
+  }
+  if (neg_lub_height) {
+    DPRINTF(stderr, "neg_lub_height triggered \n");
+    exit(-1);
+  }
+  if (zero_detJ) {
+    DPRINTF(stderr, "zero_detJ triggered \n");
+    exit(-1);
+  }
+
+  
+  memcpy(ams->val, nj, ams->bindx[numProcUnknowns]*(sizeof(double))); 
   free(nj);
-  memcpy(resid_vector, resid_vector_save, NumUnknowns*(sizeof(double))); 
+  memcpy(resid_vector, resid_vector_save, numProcUnknowns*(sizeof(double))); 
   free(resid_vector_save);
   /* free arrays to hold jacobian and vector values */
   safe_free( (void *) irow) ;
