@@ -3356,6 +3356,10 @@ assemble_stress_log_conf(dbl tt,
   det_J = bf[eqn]->detJ;
   h3 = fv->h3;		      
 
+  memset(s,0,sizeof(double)*DIM*DIM);
+  memset(exp_s,0,sizeof(double)*DIM*DIM);
+  memset(d_exp_s_ds,0,sizeof(double)*DIM*DIM*DIM*DIM);
+
   //Load pointers
   //  (void) stress_eqn_pointer(v_s);
   //  (void) stress_eqn_pointer(R_s);
