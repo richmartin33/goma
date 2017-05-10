@@ -7437,10 +7437,10 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   a4 = (exp(a1div2) + exp(-a1div2)) / 2.0;
 
   //Compute e^s
-  exp_s[0][0] = (a2/a1) * (a4 + ((a-c)/2.0)*a3);
+  exp_s[0][0] = a2 * (a4 + ((a-c)/a1)*a3);
   exp_s[0][1] = (a2/a1) * (2*b*a3);
   exp_s[1][0] = exp_s[0][1];
-  exp_s[1][1] = (a2/a1) * (a4 + ((c-a)/2.0)*a3);
+  exp_s[1][1] = a2 * (a4 + ((c-a)/a1)*a3);
 
   double inva1cubed = 1.0 / (a1*a1*a1);
 
@@ -7466,13 +7466,10 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   d_exp_s_ds[0][1][0][1] = (2 * a2 * inva1cubed) * (pow(a - c, 2) * a3 + 2 * b * b * a1 * a4);
 
   //d/ds21{e^s12}
-  d_exp_s_ds[0][1][1][0] = d_exp_s_ds[0][1][1][0];
+  d_exp_s_ds[0][1][1][0] = d_exp_s_ds[0][1][0][1];
 
   //d/ds22{e^s12}
   d_exp_s_ds[0][1][1][1] = (b * a2 * inva1cubed) * ((a1*a1 + 2*(a - c))*a3 + a1*(c-a)*a4);
-  /* d_exp_s_ds[1][2][2][2]  = a3*(a1*a1 + 2.0*(s[1][1]-s[2][2])); */
-  /* d_exp_s_ds[1][2][2][2] += a1*a4*(s[2][2] - s[1][1]); */
-  /* d_exp_s_ds[1][2][2][2] *= s[1][2]*a2/(a1*a1*a1); */
 
   //d/ds11{e^s21}
   d_exp_s_ds[1][0][0][0] = d_exp_s_ds[0][1][0][0];
@@ -7496,7 +7493,7 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   d_exp_s_ds[1][1][1][0] = d_exp_s_ds[1][1][0][1];
 
   //d/ds22{e^s22}
-  d_exp_s_ds[1][1][1][1] = (2*a2*inva1cubed) * ((pow(a-c, 3) + 4*b*b*((a-c) - 1))*a3 - a1 * (pow(a-c, 2) + 2*b*b) * a4);
+  d_exp_s_ds[1][1][1][1] = (a2*inva1cubed) * ((pow(c-a, 3) + 4*b*b*(c-a+1.))*a3 + a1 * (pow(a-c, 2) + 2*b*b) * a4);
 }
 
 /*****************************************************************************/
