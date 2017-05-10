@@ -4399,18 +4399,21 @@ assemble_stress_map_log_conf(dbl tt,
                           for(p=0; p<VIM; p++) 
                             {    
                               for(q=0; q<VIM; q++) 
-                                {    
-                                  var = v_log_c[mode][p][q];
-                                  if(pd->v[var])
-                                    {    
-                                      pvar = upd->vp[var];
-                                      for(j=0; j<ei->dof[var]; j++) 
+                                { 
+                                  if(p<=q)
+                                    {   
+                                      var = v_log_c[mode][p][q];
+                                      if(pd->v[var])
                                         {    
-                                          phi_j = bf[var]->phi[j];
-                                          source = -mup/lambda*d_exp_s_ds[a][b][p][q];
-                                          source *= phi_j*det_J*h3;
-                                          source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
-                                          lec -> J[peqn][pvar][i][j] += source;
+                                          pvar = upd->vp[var];
+                                          for(j=0; j<ei->dof[var]; j++) 
+                                            {    
+                                              phi_j = bf[var]->phi[j];
+                                              source = -mup/lambda*d_exp_s_ds[a][b][p][q];
+                                              source *= phi_j*det_J*h3;
+                                              source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
+                                              lec -> J[peqn][pvar][i][j] += source;
+                                            }
                                         }
                                     }    
                                 }    
