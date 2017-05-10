@@ -4367,13 +4367,13 @@ assemble_stress_map_log_conf(dbl tt,
                   if(a<=b)
                     {
                       eqn = R_s[mode][a][b];
+                      peqn = upd->ep[eqn];
  
                       for(i=0; i<ei->dof[eqn]; i++)
                         {
                           wt_func = bf[eqn]->phi[i];
 
                           // J_map_S
-                          source = 0.0;
                           for(p=0; p<VIM; p++)
                             {
                               for(q=0; q<VIM; q++)
@@ -4385,18 +4385,17 @@ assemble_stress_map_log_conf(dbl tt,
                                       for(j=0; j<ei->dof[var]; j++)
                                         {
                                           phi_j = bf[var]->phi[j]; 
-                                          source += (double)delta(a,p)*(double)delta(b,q);
+                                          source = (double)delta(a,p)*(double)delta(b,q);
                                           source *= phi_j*det_J*h3;
                                           source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
+                                          lec -> J[peqn][pvar][i][j] += source;
                                         }
                                   
-                                      lec-> J[peqn][pvar][i][j] += source;
                                     }
                                 }
                             }
 
                           // J_map_log_c
-                          source = 0.0;
                           for(p=0; p<VIM; p++) 
                             {    
                               for(q=0; q<VIM; q++) 
@@ -4408,12 +4407,11 @@ assemble_stress_map_log_conf(dbl tt,
                                       for(j=0; j<ei->dof[var]; j++) 
                                         {    
                                           phi_j = bf[var]->phi[j];
-                                          source -= d_exp_s_ds[a][b][p][q];
+                                          source = -mup/lambda*d_exp_s_ds[a][b][p][q];
                                           source *= phi_j*det_J*h3;
                                           source *= wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
+                                          lec -> J[peqn][pvar][i][j] += source;
                                         }
-                                           
-                                      lec-> J[peqn][pvar][i][j] += source;
                                     }    
                                 }    
                             }    

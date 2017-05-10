@@ -976,6 +976,8 @@ EH(-1,"version not compiled with frontal solver");
 				     &num_total_nodes,
 				     &h_elem_avg, &U_norm, NULL);
 
+              jacobian_print(ams,resid_vector);
+              exit(0);
 
 	      numerical_jacobian_compute(ams, x, resid_vector, delta_t, theta, 
 				 x_old, x_older, xdot, xdot_old,x_update,
