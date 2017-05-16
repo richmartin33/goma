@@ -9126,7 +9126,7 @@ load_fv_grads(void)
       ***************************************************************************/
 {
   int v;			/* variable type indicator */
-  int i, a;			/* index */
+  int i, a, b;			/* index */
   int p, q, r, s;		/* dimension index */
   int dofs;			/* degrees of freedom */
   int w;			/* concentration species */
@@ -9135,6 +9135,9 @@ load_fv_grads(void)
   int status = 0;
   int transient_run =  (pd->TimeIntegration != STEADY) ;
   BASIS_FUNCTIONS_STRUCT *bfn;
+
+  double s1[DIM][DIM];
+  double exp_s[DIM][DIM];
 
   int wim = dim;
   if (pd->CoordinateSystem == SWIRLING ||
@@ -10099,22 +10102,19 @@ load_fv_grads(void)
                       for ( i=0; i<dofs; i++)
                         {
 
-                          double s[DIM][DIM];
-                          double exp_s[DIM][DIM];
-
                           for (a = 0; a < VIM; a++) {
-                            for (int b = 0; b < VIM; b++) {
+                            for ( b = 0; b < VIM; b++) {
                               exp_s[a][b] = 0;
                               if (a <= b) {
-                                s[a][b] = *esp->log_c[mode][a][b][i];
+                                s1[a][b] = *esp->log_c[mode][a][b][i];
                               } else {
-                                s[a][b] = *esp->log_c[mode][b][a][i];
+                                s1[a][b] = *esp->log_c[mode][b][a][i];
                               }
                             }
                           }
 
                           //compute_exp_s(s, exp_s);
-                          log_conf_analytic_2D(s, exp_s);
+                          log_conf_analytic_2D(s1, exp_s);
 
                           fv->grad_exp_s[mode][r][p][q] +=
                             exp_s[p][q] * bf[v]->grad_phi[i][r] ;

@@ -259,8 +259,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
    */
   for (j = 0; j < NumUnknowns; j++)       /* loop over each column */  
     {
-      if ((idv[j][0] >= POLYMER_STRESS11 && idv[j][0] <= POLYMER_STRESS33) ||
-          (idv[j][0] == PRESSURE)) continue;
+      //if ((idv[j][0] >= POLYMER_STRESS11 && idv[j][0] <= POLYMER_STRESS33) ||
+      //    (idv[j][0] == PRESSURE)) continue;
+      if (idv[j][0] < LOG_CONF11 || idv[j][0] > LOG_CONF33) continue;
 
       /*
        * Perturb one variable at a time
