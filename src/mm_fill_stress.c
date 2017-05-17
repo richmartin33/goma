@@ -3510,8 +3510,8 @@ assemble_stress_log_conf(dbl tt,
       if(VIM==2)
 	{	  
 	  //Compute d/ds(e^s)
-	  //log_conf_analytic_2D_with_jac(s, exp_s2, d_exp_s_ds2);
-	  compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
+	  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+	  //compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
 	  
 	}
       //Use finite difference Jacobian for d/ds(e^2) in cylindrical and 3d
@@ -7009,6 +7009,8 @@ log_conf_analytic_2D(dbl s[DIM][DIM],                   //s - stress
   // cosh(a1/2)
   a4 = (exp(a1div2) + exp(-a1div2)) / 2.0;
 
+  memset( exp_s, 0, sizeof(double)*DIM*DIM);
+
   //Compute e^s
   exp_s[0][0] = a2 * (a4 + ((a-c)/a1)*a3);
   exp_s[0][1] = (a2/a1) * (2*b*a3);
@@ -7036,6 +7038,9 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   a3 = (exp(a1div2) - exp(-a1div2)) / 2.0;
   // cosh(a1/2)
   a4 = (exp(a1div2) + exp(-a1div2)) / 2.0;
+  
+  memset( exp_s, 0, sizeof(double)*DIM*DIM);
+  memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
 
   //Compute e^s
     exp_s[0][0] = a2 * (a4 + ((a-c)/a1)*a3);

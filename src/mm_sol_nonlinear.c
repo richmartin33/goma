@@ -981,9 +981,9 @@ EH(-1,"version not compiled with frontal solver");
 				 Debug_Flag, time_value, exo, dpi,
 				 &h_elem_avg, &U_norm);
 
-              //jacobian_print(ams,resid_vector);
+              jacobian_print(ams,resid_vector);
 
-              //exit(0);
+              exit(0);
 
 	      a_end = ut();
 	      if (err == -1) {
