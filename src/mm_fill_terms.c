@@ -4015,41 +4015,44 @@ assemble_momentum(dbl time,       /* current time */
 		      {
 			for ( c=0; c<VIM; c++)
 			  {
-			    var = v_s[mode][b][c];
-						  
-			    if ( pdv[var] )
+                            if (b <= c)
 			      {
-							  
-				pvar = upd->vp[var];
-							  
-				for ( j=0; j<ei->dof[var]; j++)
-								  
+				var = v_s[mode][b][c];
+						  
+				if ( pdv[var] )
 				  {
-				    phi_j = bf[var]->phi[j];
+							  
+				    pvar = upd->vp[var];
+							  
+				    for ( j=0; j<ei->dof[var]; j++)
 								  
-				    diffusion = 0.;
-								  
-				    if ( pd->e[eqn] & T_DIFFUSION )
 				      {
-					for ( p=0; p<VIM; p++)
-					  {
-					    for ( q=0; q<VIM; q++)
-					      {
-						diffusion -=
-						  grad_phi_i_e_a[p][q] * d_Pi->S[p][q][mode][b][c][j];
-					      }
-					  }
-					diffusion *= det_J * wt * h3;
-					diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
-				      }
+					phi_j = bf[var]->phi[j];
 								  
-				    lec->J[peqn][pvar][ii][j] +=
-				      diffusion;
+					diffusion = 0.;
+								  
+					if ( pd->e[eqn] & T_DIFFUSION )
+					  {
+					    for ( p=0; p<VIM; p++)
+					      {
+						for ( q=0; q<VIM; q++)
+						  {
+						    diffusion -=
+						      grad_phi_i_e_a[p][q] * d_Pi->S[p][q][mode][b][c][j];
+						  }
+					      }
+					    diffusion *= det_J * wt * h3;
+					    diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+					  }
+								  
+					lec->J[peqn][pvar][ii][j] +=
+					  diffusion;
+				      }
 				  }
-			      }
-			  }
-		      }
-		  }
+			      } // if (b <= c)
+			  } // loop over c
+		      } // loop over b
+		  } // loop over modes
 	      }
 		  
 	      /*
@@ -28027,6 +28030,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 
   // conformation tensor
   dbl exp_s[MAX_MODES][DIM][DIM];
+  dbl d_exp_s_ds[MAX_MODES][DIM][DIM][DIM][DIM];
 
   // Particle stress for suspension balance model
   dbl tau_p[DIM][DIM];
@@ -28037,7 +28041,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
   dbl d_tau_p_dp[DIM][DIM][MDE];
   int w0;                               // Suspension species number
 
-  dbl *grad_v[DIM];		        // Gradient of v. */
+  dbl *grad_v[DIM];		        // Gradient of v.
   dbl gamma[DIM][DIM];                  // Shear rate tensor based on velocity
   dbl s[DIM][DIM];                      // Polymer stress tensor
   dbl gamma_cont[DIM][DIM];             // Shear rate tensor based on continuous gradient of velocity
@@ -28095,6 +28099,14 @@ fluid_stress_conf( double Pi[DIM][DIM],
       d_mup = NULL;
     }
   
+  /*  
+   * In Cartesian coordinates, this velocity gradient tensor will
+   * have components that are...
+   *
+   *                    grad_v[a][b] = d v_b
+   *                                   -----
+   *                                   d x_a
+   */
 
   for(a=0; a<VIM; a++)
     {
@@ -28107,6 +28119,11 @@ fluid_stress_conf( double Pi[DIM][DIM],
   memset(d_tau_p_dy,    0, sizeof(double) * DIM*DIM*MAX_CONC*MDE);
   memset(d_tau_p_dmesh, 0, sizeof(double) * DIM*DIM*DIM*MDE);
   memset(d_tau_p_dp,    0, sizeof(double) * DIM*DIM*MDE);
+
+  // Log conformation terms
+  memset(exp_s, 0, sizeof(double) * DIM*DIM*MAX_MODES);
+  memset(d_exp_s_ds, 0, sizeof(double) * DIM*DIM*DIM*DIM*MAX_MODES);
+
   if(cr->MassFluxModel == DM_SUSPENSION_BALANCE || cr->MassFluxModel == HYDRODYNAMIC_QTENSOR)
     {
       w0 = gn->sus_species_no;
@@ -28548,6 +28565,15 @@ fluid_stress_conf( double Pi[DIM][DIM],
     }
 
   var = POLYMER_STRESS11;
+
+  // Calculate d_exp_s_ds for LOG_CONF case
+  for (mode = 0; mode < vn->modes; mode++)
+    {
+      log_conf_analytic_2D_with_jac(fv->S[mode], exp_s[mode],
+                                    d_exp_s_ds[mode]); 
+    }
+                
+  // POLYMER_STRESS
   if(d_Pi!=NULL && pd->v[var])
     {
       for(p=0; p<VIM; p++)
@@ -28564,7 +28590,6 @@ fluid_stress_conf( double Pi[DIM][DIM],
 		    {
 		      lambda = ve[mode]->time_const;
 		    }	
-
                   for(a=0; a<VIM; a++)
                     {
                       for(b=0; b<VIM; b++)
@@ -28572,20 +28597,24 @@ fluid_stress_conf( double Pi[DIM][DIM],
                           var = v_s[mode][a][b];
                           for(j=0; j<ei->dof[var]; j++)
                             {
-			      if(conf)
-				{
-				  d_Pi->S[p][q][mode][a][b][j] = mup/lambda*delta(a,p)*delta(b,q)*bf[var]->phi[j];
-				}
-			      else
-				{
-				  d_Pi->S[p][q][mode][a][b][j] = delta(a,p)*delta(b,q)*bf[var]->phi[j];
-				}
-			    }
-			}
-		    }
-		}
-	    }
-	}
+		              if(conf == CONF)
+		                {
+		                  d_Pi->S[p][q][mode][a][b][j] = mup/lambda*delta(a,p)*delta(b,q)*bf[var]->phi[j];
+		                }
+                              else if(conf == LOG_CONF)
+                                {
+                                  d_Pi->S[p][q][mode][a][b][j] = mup/lambda*d_exp_s_ds[mode][p][q][a][b]*bf[var]->phi[j];
+                                }
+		              else
+		                {
+		                  d_Pi->S[p][q][mode][a][b][j] = delta(a,p)*delta(b,q)*bf[var]->phi[j];
+		                }
+                            }
+		        } // loop over b
+		    } // loop over a
+		} // loop over modes
+	    } // loop over q
+	} // loop over p
     }
 
   var = VELOCITY_GRADIENT11;

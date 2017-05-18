@@ -974,6 +974,9 @@ EH(-1,"version not compiled with frontal solver");
 				     &num_total_nodes,
 				     &h_elem_avg, &U_norm, NULL);
 
+              //jacobian_print(ams,resid_vector);
+
+              //exit(0);
 
 	      numerical_jacobian_compute(ams, x, resid_vector, delta_t, theta, 
 				 x_old, x_older, xdot, xdot_old,x_update,
@@ -981,9 +984,9 @@ EH(-1,"version not compiled with frontal solver");
 				 Debug_Flag, time_value, exo, dpi,
 				 &h_elem_avg, &U_norm);
 
-              jacobian_print(ams,resid_vector);
+              //jacobian_print(ams,resid_vector);
 
-              exit(0);
+              //exit(0);
 
 	      a_end = ut();
 	      if (err == -1) {

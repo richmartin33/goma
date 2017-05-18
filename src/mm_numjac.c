@@ -261,10 +261,12 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
        * Perturb one variable at a time
        */
 
+      if (idv[j][0] == PRESSURE) continue;
+
       //      sprintf(errstring, "Computing J[:,%d] with respect to %s\n", j, Var_Name[idv[j][0]].name1);
       //      printf(errstring);
        
-     if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
+      if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
 
       dx = x_scale[idv[j][0]] * FD_DELTA_UNKNOWN;
       if(dx < 1.0E-15) dx = 1.0E-7;
@@ -414,11 +416,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
           var_j = idv[j][0];
 
 	        /* Only for stress terms */
-	  if ((idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33) &&
-	      (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33)) continue;
-
-          /*if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
-              (idv[i][0] < LOG_CONF11 || idv[i][0] > LOG_CONF33)) continue;*/
+	  if (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) continue;
 
           if (Inter_Mask[var_i][var_j]) {
 
