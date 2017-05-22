@@ -2426,6 +2426,1103 @@ assemble_stress_fortin(dbl tt,	/* parameter to vary time integration from
   return(status);
 }
 
+
+
+// FENE-P Stress Constitutive model
+
+int 
+assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from 
+				 * explicit (tt = 1) to implicit (tt = 0) */
+		       dbl dt,	/* current time step size */
+		       dbl h[DIM], /* coordinate scale factors */
+		       dbl hh[DIM][DIM], /* coordinate scale factors */
+		       dbl dh_dxnode[DIM][MDE],
+		       dbl vcent[DIM], /* Average element velocity, which is 
+					* the centroid velocity for Q2 and the
+					* average of the vertices for Q1. It 
+					* comes from the routine 
+					* "element_velocity." */
+		       dbl dvc_dnode[DIM][MDE])
+{
+  int dim, p, q, r, a, b, w;
+
+  int eqn, var;
+  int peqn, pvar;
+
+  int i, j, status, mode;
+  dbl v[DIM];			        /* Velocity field. */
+  dbl x_dot[DIM];			/* current position field derivative wrt time. */
+  dbl h3;		        	/* Volume element (scale factors). */
+  dbl dh3dmesh_pj;	        	/* Sensitivity to (p,j) mesh dof. */
+
+  dbl grad_v[DIM][DIM];
+  dbl gamma[DIM][DIM];                  /* Shear-rate tensor based on velocity */
+  dbl det_J;                            /* determinant of element Jacobian */
+
+  dbl d_det_J_dmesh_pj;			/* for specific (p,j) mesh dof */
+
+  dbl mass;			        /* For terms and their derivatives */
+  dbl mass_a, mass_b;
+  dbl advection;	
+  dbl advection_a, advection_b, advection_c, advection_d;
+  dbl diffusion;
+  dbl source;
+  dbl source1;
+  dbl source_a=0, source_b=0, source_c=0;
+
+  dbl wt_func;
+
+
+  /*
+   * Interpolation functions for variables and some of their derivatives.
+   */
+
+  dbl phi_j;
+  dbl wt;
+
+  /* Variables for stress */
+
+  int R_s[MAX_MODES][DIM][DIM]; 
+  int v_s[MAX_MODES][DIM][DIM]; 
+  int v_g[DIM][DIM]; 
+
+  dbl s[DIM][DIM];         /* stress tensor */
+  dbl s_dot[DIM][DIM];     /* stress tensor from last time step */
+  dbl grad_s[DIM][DIM][DIM];
+  dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE]; /* derivative of grad of stress tensor for mode ve_mode */
+
+  dbl g[DIM][DIM];         /* velocity gradient tensor */
+  dbl gt[DIM][DIM];        /* transpose of velocity gradient tensor */
+
+
+  /* dot product tensors */
+
+  dbl s_dot_s[DIM][DIM]; 
+  dbl s_dot_g[DIM][DIM];
+  dbl g_dot_s[DIM][DIM];
+  dbl s_dot_gt[DIM][DIM];
+  dbl gt_dot_s[DIM][DIM];
+
+  /* polymer viscosity and derivatives */
+  dbl mup;
+  VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+
+  dbl d_mup_dv_pj; 
+  dbl d_mup_dmesh_pj; 
+
+  /*  shift function */
+  dbl at = 0.0;
+  dbl d_at_dT[MDE];
+  dbl wlf_denom;
+
+  /* constitutive equation parameters */
+  dbl alpha;     /* This is the Geisekus mobility parameter */
+  dbl lambda=0;    /* polymer relaxation constant */
+  dbl ucwt, lcwt; /* Upper convected derviative weight, Lower convected derivative weight */
+  dbl eps;       /* This is the PTT elongation parameter */
+  dbl Z=1.0;         /* This is the factor appearing in front of the stress tensor in PTT */
+  dbl dZ_dtrace =0.0;
+  dbl b_fenep = 0.0; // b parameter for FENE-P model
+  dbl f_fenep = 0.0; // Parameter for FENE-P model
+  dbl a_fenep = 0.0; // Parameter for FENE-P model
+
+
+  /* advective terms are precalculated */
+  dbl v_dot_del_s[DIM][DIM];
+  dbl x_dot_del_s[DIM][DIM];
+
+  dbl d_xdotdels_dm;
+
+  dbl d_vdotdels_dm;
+
+  dbl trace=0.0; /* trace of the stress tensor */
+
+/* SUPG variables */
+  dbl h_elem=0, h_elem_inv=0, h_elem_deriv=0;
+  dbl supg=0;
+
+  status = 0;
+
+  eqn   = R_STRESS11;			
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+
+  if ( ! pd->e[eqn] )
+    {
+      return(status);
+    }
+
+  dim   = pd->Num_Dim;
+
+  wt = fv->wt;
+
+  det_J = bf[eqn]->detJ;
+
+  h3 = fv->h3;			/* Differential volume element (scales). */
+
+  /* load eqn and variable number in tensor form */
+  (void) stress_eqn_pointer(v_s);
+  (void) stress_eqn_pointer(R_s);
+
+  v_g[0][0] = VELOCITY_GRADIENT11;
+  v_g[0][1] = VELOCITY_GRADIENT12;
+  v_g[1][0] = VELOCITY_GRADIENT21;
+  v_g[1][1] = VELOCITY_GRADIENT22;
+  v_g[0][2] = VELOCITY_GRADIENT13;
+  v_g[1][2] = VELOCITY_GRADIENT23;
+  v_g[2][0] = VELOCITY_GRADIENT31;
+  v_g[2][1] = VELOCITY_GRADIENT32; 
+  v_g[2][2] = VELOCITY_GRADIENT33; 
+
+
+  /*
+   * Field variables...
+   */
+  
+  for ( a=0; a<dim; a++)
+    {
+      v[a] = fv->v[a];
+
+      /* note, these are zero for steady calculations */
+      if (  pd->TimeIntegration != STEADY &&  pd->v[MESH_DISPLACEMENT1+a] )
+	{
+	  x_dot[a] = fv_dot->x[a];
+	}
+      else
+	{
+	  x_dot[a] = 0.;
+	}
+    }
+
+  /*
+   * In Cartesian coordinates, this velocity gradient tensor will
+   * have components that are...
+   *
+   * 			grad_v[a][b] = d v_b
+   *				       -----
+   *				       d x_a
+   */
+
+  for ( a=0; a<VIM; a++)
+    {
+      for ( b=0; b<VIM; b++)
+	{
+	  grad_v[a][b] = fv->grad_v[a][b];
+	}
+    }
+
+/* load up shearrate tensor based on velocity */
+  for ( a=0; a<VIM; a++)
+    {
+      for ( b=0; b<VIM; b++)
+	{
+	  gamma[a][b] = grad_v[a][b] + grad_v[b][a];
+	}
+    }
+
+  for ( a=0; a<VIM; a++)
+    {
+      for ( b=0; b<VIM; b++)
+	{
+	  g[a][b]  = fv->G[a][b];
+	  gt[b][a]  = g[a][b];
+	}
+    }
+  
+  if( vn->wt_funcModel == GALERKIN)
+    {
+      supg = 0.;
+    }
+  else if( vn->wt_funcModel == SUPG)
+    {
+      supg = vn->wt_func;
+    }
+
+
+  if(supg!=0.)
+    {
+      h_elem = 0.;
+      for ( p=0; p<dim; p++)
+	{
+	  h_elem += vcent[p]*vcent[p]*h[p];
+	}
+      h_elem = sqrt(h_elem)/2.;
+      if(h_elem == 0.) 
+	{
+	  h_elem_inv=1.;
+	}
+      else
+	{
+	  h_elem_inv=1./h_elem;
+	}
+	
+    }
+/* end Petrov-Galerkin addition */
+
+      /*  shift factor  */
+   if( pd->e[TEMPERATURE])
+      {
+      if(vn->shiftModel == CONSTANT)
+	{
+	  at = vn->shift[0];
+	  for( j=0 ; j<ei->dof[TEMPERATURE] ; j++)
+		{
+		d_at_dT[j]=0.;
+		}
+	}
+      else if(vn->shiftModel == MODIFIED_WLF)
+	{
+  	wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
+  	if(wlf_denom != 0.)
+        	{
+      		at=exp(vn->shift[0]*(mp->reference[TEMPERATURE]-fv->T)/wlf_denom);
+	  	for( j=0 ; j<ei->dof[TEMPERATURE] ; j++)
+			{
+			d_at_dT[j]= -at*vn->shift[0]*vn->shift[1]
+				/(wlf_denom*wlf_denom)*bf[TEMPERATURE]->phi[j];
+			}
+        	}
+  	else
+    		{ 
+      		at = 1.;
+    		} 
+	  	for( j=0 ; j<ei->dof[TEMPERATURE] ; j++)
+			{
+			d_at_dT[j]=0.;
+			}
+	}
+      }
+    else
+      {
+	at = 1.;
+      }
+
+  // Begin loop over modes
+  for ( mode=0; mode<vn->modes; mode++)
+    {
+      
+      load_modal_pointers(mode, tt, dt, s, s_dot, grad_s, d_grad_s_dmesh);
+      
+      /* precalculate advective terms of form (v dot del tensor)*/
+
+      trace = 0.0;
+
+      for ( a=0; a<VIM; a++)
+	{
+	  trace += s[a][a];
+	  for ( b=0; b<VIM; b++)
+	    {
+	      v_dot_del_s[a][b] = 0.;
+	      x_dot_del_s[a][b] = 0.; 
+	      for ( q=0; q<dim; q++)
+		{
+		  v_dot_del_s[a][b] +=  v[q] * grad_s[q][a][b];
+		  x_dot_del_s[a][b] +=  x_dot[q] * grad_s[q][a][b];
+		} 
+	    }
+	}
+      
+      // get polymer viscosity
+      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+
+      // get Geisekus mobility parameter
+      alpha = ve[mode]->alpha;
+      
+      // get time constant
+      if(ve[mode]->time_constModel == CONSTANT)
+	{
+	  lambda = ve[mode]->time_const;
+          b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+	}
+      else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
+	{
+	  lambda = mup/ve[mode]->time_const;
+	}
+
+      // FENE-P parameters
+      f_fenep = b_fenep / (b_fenep - trace);
+      a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+
+      ucwt = 1.0 - ve[mode]->xi / 2.0 ;
+      lcwt = ve[mode]->xi / 2.0 ;
+      
+      eps = ve[mode]->eps;
+
+      Z = exp( eps*(f_fenep*trace - a_fenep *(double)dim) ); 
+      dZ_dtrace = Z*eps*f_fenep;
+
+
+      /* get tensor dot products for future use */
+      
+      if( alpha != 0.) (void) tensor_dot(s, s, s_dot_s, VIM);
+
+      if( ucwt != 0. )
+	{
+	  (void) tensor_dot(s, g, s_dot_g, VIM);
+	  (void) tensor_dot(gt, s, gt_dot_s, VIM);
+	}
+
+      if( lcwt != 0.) 
+	{
+	  (void) tensor_dot(s, gt, s_dot_gt, VIM);
+	  (void) tensor_dot(g, s, g_dot_s, VIM);
+	}
+      /*
+       * Residuals_________________________________________________________________
+       */
+      
+      if ( af->Assemble_Residual )
+	{
+	  /*
+	   * Assemble each component "ab" of the polymer stress equation...
+	   */
+	  for ( a=0; a<VIM; a++)
+	    {
+	      for ( b=0; b<VIM; b++)
+		{
+		  
+		  if(a <= b) /* since the stress tensor is symmetric, only assemble the upper half */ 
+		    {
+		      eqn = R_s[mode][a][b];
+		      
+		      /*
+		       * In the element, there will be contributions to this many equations
+		       * based on the number of degrees of freedom...
+		       */
+		      
+		      for ( i=0; i<ei->dof[eqn]; i++)
+			{
+			  wt_func = bf[eqn]->phi[i];
+			  /* add Petrov-Galerkin terms as necessary */
+			  if(supg!=0.)
+			    {
+			      for(w=0; w<dim; w++)
+				{
+				  wt_func += supg * h_elem*v[w]*bf[eqn]->grad_phi[i] [w];
+				}
+			    }
+			  
+			  mass = 0.;
+			  
+			  if ( pd->TimeIntegration != STEADY )
+			    {
+			      if ( pd->e[eqn] & T_MASS )
+				{
+				  mass = s_dot[a][b];
+				  mass *= wt_func * at * lambda * det_J * wt;
+				  mass *= h3;
+				  mass *= pd->etm[eqn][(LOG2_MASS)];
+				}
+			    }
+			  
+			  advection = 0.;
+			  if ( pd->e[eqn] & T_ADVECTION )
+ 			    {
+			      if(lambda != 0.)
+				{
+				  
+				  advection +=  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
+				  if( ucwt != 0.) advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
+				  if( lcwt != 0.) advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+
+				  advection *= wt_func * at * lambda *det_J * wt * h3;
+				  advection *= pd->etm[eqn][(LOG2_ADVECTION)];
+				}     
+			    }
+			  
+
+			  diffusion = 0.;
+			  if ( pd->e[eqn] & T_DIFFUSION )
+			    {
+			      /* add SU term in here when appropriate */
+			      diffusion += 0.;
+			      diffusion *= -wt_func * det_J * wt * h3;
+			      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+			    }
+			  
+
+			  /*
+			   * Source term...
+			   */
+			  
+			  source = 0.;
+			  if ( pd->e[eqn] & T_SOURCE )
+			    {
+			      source +=  Z * f_fenep * s[a][b] / lambda;
+                              if(a==b)
+                                {
+                                  source -= a_fenep * Z / lambda;
+                                }
+
+			      
+			      if(alpha != 0.)
+				{
+				  source1 = f_fenep * f_fenep * s_dot_s[a][b] - 2.0 * f_fenep * a_fenep * s[a][b];
+				  if(a==b)
+                                    {
+                                      source1 += a_fenep * a_fenep;
+                                    }
+				  source1 *= alpha / lambda;
+				  source  += source1;
+				}
+			      
+			      source *= wt_func * det_J * h3 * wt;
+			      
+			      source *= pd->etm[eqn][(LOG2_SOURCE)];
+			    }
+			  
+			  /*
+			   * Add contributions to this residual (globally into Resid, and 
+			   * locally into an accumulator)
+			   */
+			  
+			  lec->R[upd->ep[eqn]][i] += 
+			    mass + advection + diffusion + source;
+			}
+		    }
+		}
+	    }
+	}
+      
+      /*
+       * Jacobian terms...
+       */
+      
+      if ( af->Assemble_Jacobian )
+	{
+	  dbl R_source, R_advection; /* Places to put the raw residual portions 
+					        instead of constantly recalcing them */
+	  for ( a=0; a<VIM; a++)
+	    {
+	      for ( b=0; b<VIM; b++)
+		{
+		  if(a <= b) /* since the stress tensor is symmetric, only assemble the upper half */ 
+		    {
+		      eqn = R_s[mode][a][b];
+		      peqn = upd->ep[eqn];
+
+		      R_advection =  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
+		      if( ucwt != 0.) R_advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
+		      if( lcwt != 0.) R_advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+
+		      R_source =   Z*s[a][b] - at * mup * ( g[a][b] +  gt[a][b]);
+			      
+		      if(alpha != 0.) R_source  +=  alpha * lambda*( s_dot_s[a][b]/mup);
+		      
+		      for ( i=0; i<ei->dof[eqn]; i++)
+			{
+			  
+			  wt_func = bf[eqn]->phi[i];
+			  /* add Petrov-Galerkin terms as necessary */
+			  if(supg!=0.)
+			    {
+			      for(w=0; w<dim; w++)
+				{
+				  wt_func += supg * h_elem*v[w]*bf[eqn]->grad_phi[i] [w];
+				}
+			    }
+			  
+			  
+			  /*
+			   * Set up some preliminaries that are needed for the (a,i)
+			   * equation for bunches of (b,j) column variables...
+			   */
+			  
+			  /* 
+			   * J_S_T
+			   */
+			  
+			  var = TEMPERATURE;
+			  if ( pd->v[var] )
+			    {
+			      pvar = upd->vp[var];
+			      for ( j=0; j<ei->dof[var]; j++)
+				{
+				  phi_j = bf[var]->phi[j];
+				  
+			   	   mass = 0.;
+			  
+			  	   if ( pd->TimeIntegration != STEADY )
+			    	     {
+			      	       if ( pd->e[eqn] & T_MASS )
+					 {
+				  	  mass = s_dot[a][b];
+				  	  mass *= wt_func * d_at_dT[j] * lambda * det_J * wt;
+				  	  mass *= h3;
+				  	  mass *= pd->etm[eqn][(LOG2_MASS)];
+					 }
+			    	     }
+			  
+			  	   advection = 0.;
+			  	   if ( pd->e[eqn] & T_ADVECTION )
+ 			    	     {
+			      	      if(lambda != 0.)
+					{
+				  
+				  	advection +=  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
+				  	if( ucwt != 0.) advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
+				  	if( lcwt != 0.) advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+
+				  	advection *= wt_func * d_at_dT[j] * lambda *det_J * wt * h3;
+				  	advection *= pd->etm[eqn][(LOG2_ADVECTION)];
+					}     
+			    	     }
+			  
+				  source    = 0.;
+				  source1    = 0.;
+				  if ( pd->e[eqn] & T_SOURCE )
+				    {
+				      source = -(g[a][b] +  gt[a][b])
+					*(at*d_mup->T[j]+mup*d_at_dT[j]);
+				      if(alpha != 0.)
+					{
+					  source1 -= s_dot_s[a][b]/(mup*mup)*d_mup->T[j];
+					  source1 *= lambda * alpha ;
+					  source  += source1;
+					}
+				      source *= wt_func * det_J * wt * h3;
+				      source *= pd->etm[eqn][(LOG2_SOURCE)];
+				    }
+				  
+				  lec->J[peqn][pvar][i][j] +=
+				    mass + advection + source;
+				}
+			    }
+			  
+			  /*
+			   * J_S_v
+			   */
+			  for ( p=0; p<dim; p++)
+			    {
+			      var = VELOCITY1+p;
+			      if ( pd->v[var] )
+				{
+				  pvar = upd->vp[var];
+				  for ( j=0; j<ei->dof[var]; j++)
+				    {
+				      phi_j = bf[var]->phi[j];
+				      d_mup_dv_pj  = d_mup->v[p][j];
+				      
+				      mass = 0.;
+
+				      
+				      if ( pd->TimeIntegration != STEADY )
+					{
+					  if ( pd->e[eqn] & T_MASS )
+					    {
+					      if(supg!=0.)
+						{
+						  mass = supg * h_elem*phi_j*bf[eqn]->grad_phi[i][p];
+						  
+						  for(w=0;w<dim;w++)
+						    {
+						      mass += supg * vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4.
+							*v[w]*bf[eqn]->grad_phi[i] [w];
+						    }
+						  
+						  mass *=  s_dot[a][b];
+						}
+					      
+					      mass *= pd->etm[eqn][(LOG2_MASS)] * at * lambda * det_J * wt * h3;
+					    }
+					  
+					}
+				      
+				      advection = 0.;
+				      
+				      if ( pd->e[eqn] & T_ADVECTION )
+					{
+					  if(lambda != 0.)
+					    {
+					      advection_a = phi_j * 
+						(grad_s[p][a][b]);
+					      
+					      advection_a *=  wt_func;
+					      
+					      advection_b = 0.;
+					      /* Petrov-Galerkin term */
+					      if(supg !=0.)
+						{
+						 
+						  advection_b =  supg * h_elem*phi_j*bf[eqn]->grad_phi[i][p];
+						  for( w =0; w<dim; w++ )
+						    {
+						      advection_b += supg*vcent[p]*h[p]*dvc_dnode[p][j]*h_elem_inv/4.
+							*v[w]*bf[eqn]->grad_phi[i] [w];
+						    }
+						  
+						  advection_b *= R_advection;
+						}
+					      
+					      advection = advection_a +  advection_b;
+					      advection *= at * lambda * det_J * wt *h3;
+					      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
+					    }
+					}
+				      
+				      diffusion = 0.;
+				      
+				      if ( pd->e[eqn] & T_DIFFUSION )
+					{
+					  /* add SU term in here when appropriate */
+					  
+					  diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+					}
+				      
+				      source    = 0.;
+				      
+				      if ( pd->e[eqn] & T_SOURCE )
+					{
+					  source_c =  -at * d_mup_dv_pj * ( g[a][b] +  gt[a][b]);
+					  source_c *= wt_func;
+					  
+					  source_a = 0.;
+					  if(alpha != 0.)
+					    {
+					      source_a = -s_dot_s[a][b]/(mup*mup);
+					      source_a *= wt_func * alpha * lambda * d_mup_dv_pj;
+					    }
+					  
+					  source_b = 0.;
+					  if(supg != 0.)
+					    {
+					      source_b = supg * h_elem* phi_j*bf[eqn]->grad_phi[i][p];
+					      
+					      for(w=0;w<dim;w++)
+						{
+						  source_b += supg*vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4.
+						    *v[w]*bf[eqn]->grad_phi[i] [w];
+						}
+					      
+					      source_b *= R_source;
+					    }
+					  
+					  source = source_a + source_b + source_c;
+					  source *=  det_J * wt * h3;
+					  source *= pd->etm[eqn][(LOG2_SOURCE)];
+					}
+				  
+				      lec->J[peqn][pvar][i][j] +=
+					mass + advection + diffusion + source;
+				    }
+				}
+			    }
+			  
+			  /*
+			   * J_S_c
+			   */
+			  var = MASS_FRACTION;
+			  if ( pd->v[var] )
+			    {
+			      for ( j=0; j<ei->dof[var]; j++)
+				{
+				  phi_j = bf[var]->phi[j];
+				  
+				  for ( w=0; w<pd->Num_Species_Eqn; w++)
+				    {
+				      
+				      source    = 0.;
+			  
+				      if ( pd->e[eqn] & T_SOURCE )
+					{
+					  source_a =   -at * d_mup->C[w][j] * ( g[a][b] +  gt[a][b]);
+					  source_b = 0.;
+					  if(alpha != 0.)
+					    {
+					      source_b -= s_dot_s[a][b]/(mup*mup);
+					      source_b *= alpha * lambda * d_mup->C[w][j];
+					    }
+					  source = source_a + source_b;
+					  source *= wt_func * det_J * wt * h3;
+					  source *= pd->etm[eqn][(LOG2_SOURCE)];
+					  
+					}
+				      
+				      if ( w > 1 )
+					{
+					  EH(-1, "Need more arrays for each species.");
+					}
+				      
+				      lec->J[peqn][MAX_PROB_VAR + w][i][j] +=
+					source;
+				    }
+				}
+			    }
+			  
+			  /*
+			   * J_S_P
+			   */
+			  var = PRESSURE;
+			  if ( pd->v[var] )
+			    {
+			      pvar = upd->vp[var];
+			      for ( j=0; j<ei->dof[var]; j++)
+				{
+				  phi_j = bf[var]->phi[j];
+				  
+				  source    = 0.;
+				  if ( pd->e[eqn] & T_SOURCE )
+				    {
+				      source_a +=  -at * d_mup->P[j] * ( g[a][b] +  gt[a][b]);
+				      source_b = 0.;
+				      if(alpha != 0.)
+					{
+					  source_b -= ( s_dot_s[a][b]/(mup*mup));
+					  source_b *= d_mup->P[j] * alpha * lambda;
+					}
+				      source  = source_a + source_b;
+				      source *= wt_func * det_J * wt * h3;
+				      source *= pd->etm[eqn][(LOG2_SOURCE)];
+				    }
+				  
+				  lec->J[peqn][pvar][i][j] +=
+				    source;
+				}		      
+			    }
+			  
+			  /*
+			   * J_S_d
+			   */
+			  for ( p=0; p<dim; p++)
+			    {
+			      var = MESH_DISPLACEMENT1+p;
+			      if ( pd->v[var] )
+				{
+				  pvar = upd->vp[var];
+				  for ( j=0; j<ei->dof[var]; j++)
+				    {
+				      phi_j = bf[var]->phi[j];
+				      d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j];
+				      dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j];
+				      d_mup_dmesh_pj  = d_mup->X [p][j];
+				      if(supg!=0.)
+					{
+					  h_elem_deriv = 0.;
+					  for( q=0; q<dim; q++ )
+					    {
+					      h_elem_deriv += 
+						hh[q][p]*vcent[q]*vcent[q]*dh_dxnode[q][j]*h_elem_inv/4.;
+					    } 
+					}
+				      
+				      mass = 0.;
+				      mass_a = 0.;
+				      mass_b = 0.;
+				      if ( pd->TimeIntegration != STEADY )
+					{
+					  if ( pd->e[eqn] & T_MASS )
+					    {
+					      mass_a = s_dot[a][b];
+					      mass_a *= wt_func * ( d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj );
+					      
+					      if(supg != 0.)
+						{
+						  for( w=0; w<dim; w++ )
+						    {
+						      mass_b += supg * (h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j]
+									+ h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] );
+						    }
+						  mass_b*= s_dot[a][b] * h3 * det_J;
+						}
+					      
+					      mass = mass_a + mass_b;
+					      mass *= at * lambda * wt * pd->etm[eqn][(LOG2_MASS)];
+					    }
+					}
+				      
+				      advection   = 0.;
+				      
+				      if ( pd->e[eqn] & T_ADVECTION )
+					{
+					  if(lambda != 0.)
+					    {
+					      /*
+					       * Four parts: 
+					       *    advection_a = 
+					       *    	Int ( ea.(v-xdot).d(Vv)/dmesh h3 |Jv| )
+					       *
+					       *    advection_b = 
+					       *  (i)	Int ( ea.(v-xdot).Vv h3 d(|Jv|)/dmesh )
+					       *  (ii)  Int ( ea.(v-xdot).d(Vv)/dmesh h3 |Jv| )
+					       *  (iii) Int ( ea.(v-xdot).Vv dh3/dmesh |Jv|   )
+					       *
+					       * For unsteady problems, we have an 
+					       * additional term
+					       *
+					       *    advection_c = 
+					       *    	Int ( ea.d(v-xdot)/dmesh.Vv h3 |Jv| )
+					       */
+					      
+					      advection_a =  R_advection;
+
+					      advection_a *= wt_func *(  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj );
+					      
+					      d_vdotdels_dm = 0.;
+					      for ( q=0; q<dim; q++)
+						{
+						  d_vdotdels_dm += (v[q]-x_dot[q]) * d_grad_s_dmesh[q][a][b] [p][j];
+						}
+					  
+					      advection_b =  d_vdotdels_dm;
+					      advection_b *=  wt_func *det_J * h3;
+					  
+					      advection_c = 0.;	
+					      if ( pd->TimeIntegration != STEADY )
+						{
+						  if ( pd->e[eqn] & T_MASS )
+						    {
+						      d_xdotdels_dm = (1.+2.*tt) * phi_j/dt 
+							* grad_s[p][a][b];
+						  
+						      advection_c -= d_xdotdels_dm;
+						      
+						      advection_c *= wt_func * h3 * det_J;
+						    }
+						}
+					      
+					      advection_d = 0.;	
+					      if(supg!=0.)
+						{
+						  for( w=0; w<dim; w++ )
+						    {
+						      advection_d+= supg *(h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j]
+									   + h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] );
+						    }
+						  
+						  advection_d *= ( R_advection )* det_J * h3;
+						}
+					  
+					      advection = advection_a + advection_b + advection_c + advection_d;
+					      
+					      advection *=  wt * at * lambda * pd->etm[eqn][(LOG2_ADVECTION)];
+					      
+					    }
+					}
+				      
+				      /*
+				       * Diffusion...
+				       */
+				      
+				      diffusion = 0.;
+				      
+				      if ( pd->e[eqn] & T_DIFFUSION )
+					{
+					  diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+					}
+				      
+				      /*
+				       * Source term...
+				       */
+				      
+				      source = 0.;
+				      
+				      if ( pd->e[eqn] & T_SOURCE )
+					{
+					  source_a =  R_source;
+					  source_b = -at * (g[a][b] +  gt[a][b]);
+					  
+					  if(alpha != 0.)
+					    {
+					      source_b += -s_dot_s[a][b]/(mup*mup) * alpha * lambda;
+					    }
+					  
+					  source_a *= wt_func * (d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj);
+					  
+					  source_b *= wt_func * det_J * h3 * d_mup_dmesh_pj ;
+					  
+					  source_c = 0.;
+					  if(supg !=0.)
+					    {
+					      for( w=0;w<dim;w++)
+						{
+						  source_c+= supg * (h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j]
+								     + h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] ); 
+						}
+					      source_c *= R_source * det_J * h3;
+					    }
+					  
+					  source  = source_a + source_b + source_c;
+					  
+					  source *=  wt * pd->etm[eqn][(LOG2_SOURCE)];
+				      
+					}
+				      
+				      lec->J[peqn][pvar][i][j] +=
+					mass + advection + diffusion + source;
+				    }
+				}
+			    }
+		      
+			  /*
+			   * J_S_G
+			   */
+			  for ( p=0; p<VIM; p++)
+			    {
+			      for ( q=0; q<VIM; q++)
+				{
+				  var =  v_g[p][q];
+				  
+				  if ( pd->v[var] )
+				    {
+				      pvar = upd->vp[var];
+				      for ( j=0; j<ei->dof[var]; j++)
+					{
+					  phi_j = bf[var]->phi[j];
+					  advection   = 0.;
+					  advection_a   = 0.;
+					  if ( pd->e[eqn] & T_ADVECTION )
+					    {
+					      if(lambda != 0.)
+						{
+						  
+						  advection -=  ucwt * (s[p][b] * (double)delta(a,q) + s[a][p] * (double)delta(b,q));
+						  advection +=  lcwt * (s[a][q] * (double)delta(p,b) + s[q][b] * (double)delta(a,p));
+						  
+						  advection *=  phi_j* h3 * det_J ;
+						  
+						  advection *= wt_func * wt * at * lambda * pd->etm[eqn][(LOG2_ADVECTION)];
+						} 
+					    }
+					  
+					  /*
+					   * Diffusion...
+					   */
+					  
+					  diffusion = 0.;
+					  
+					  if ( pd->e[eqn] & T_DIFFUSION )
+					    {
+					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+					    }
+					  
+					  /*
+					   * Source term...
+					   */
+					  
+					  source = 0.;		      
+					  
+					  if ( pd->e[eqn] & T_SOURCE )
+					    {
+					      source =  -at * mup *  phi_j *( (double)delta(a,p)*(double)delta(b,q) +  (double)delta(b,p)*(double)delta(a,q));
+					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
+					    }
+					  
+					  lec->J[peqn][pvar][i][j] +=
+					    advection + diffusion + source;
+					}
+				    }
+				}
+			    }
+		      
+			  
+			  /*
+			   * J_S_S
+			   */
+			  for ( p=0; p<VIM; p++)
+			    {
+			      for ( q=0; q<VIM; q++)
+				{
+				  var =  v_s[mode][p][q];
+				  
+				  if ( pd->v[var] )
+				    {
+				      pvar = upd->vp[var];
+				      for ( j=0; j<ei->dof[var]; j++)
+					{
+					  phi_j = bf[var]->phi[j];
+					  mass = 0.;
+					  if ( pd->TimeIntegration != STEADY )
+					    {
+					      if ( pd->e[eqn] & T_MASS )
+						{
+						  mass = (1.+2.*tt) * phi_j/dt * (double)delta(a,p) * (double)delta(b,q); 
+						  mass *= h3 * det_J;
+						  mass *= wt_func * at * lambda * wt * pd->etm[eqn][(LOG2_MASS)];
+						}
+					    }
+					  
+					  advection   = 0.;
+					  
+					  if ( pd->e[eqn] & T_ADVECTION )
+					    {
+					      if(lambda != 0.)
+						{
+						  if((a == p) && (b == q))
+						    {
+						      for( r=0; r<dim; r++)
+							{
+							  advection +=  (v[r]-x_dot[r])*  bf[var]->grad_phi[j][r];
+							}
+						    }
+						  
+						  advection -=  phi_j*ucwt * (gt[a][p] * (double)delta(b,q) + g[q][b] * (double)delta(a,p));
+						  advection +=  phi_j*lcwt * (gt[q][b] * (double)delta(p,a) + g[a][p] * (double)delta(q,b));
+						  
+						  advection *=  h3 * det_J ;
+						  
+						  advection *= wt_func * wt * at * lambda * pd->etm[eqn][(LOG2_ADVECTION)];
+						}
+					    }
+					  
+					  /*
+					   * Diffusion...
+					   */
+					  
+					  diffusion = 0.;
+					  
+					  if ( pd->e[eqn] & T_DIFFUSION )
+					    {
+					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+					    }
+					  
+					  /*
+					   * Source term...
+					   */
+					  
+					  source = 0.;		      
+					  
+					  if ( pd->e[eqn] & T_SOURCE )
+					    {
+					      source_a  =  Z * phi_j * f_fenep * (double)delta(a,p) * (double)delta(b,q) / lambda;
+ 					      if( p == q) 
+                                                {
+                                                  source_a +=  s[a][b] * dZ_dtrace * phi_j;
+                                                }
+		      
+					      source_b  =0.;
+					      if(alpha != 0.)
+						{
+						  source_b  =  phi_j *  alpha * lambda *
+						    (s[q][b] * (double)delta(a,p) + s[a][p] * (double)delta(b,q))/mup;
+						}
+					      
+					      source  = source_a + source_b;
+					      
+					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
+					      
+					    }
+					  
+					  lec->J[peqn][pvar][i][j] +=
+					    mass + advection + diffusion + source;
+					}
+				    }
+				}
+			    }
+			}
+		    }
+		}
+	    }
+	}
+    }
+  
+  return(status);
+}
+
+
+
 /* this stress routine uses the viscoelastic equations to do a solid-fluid
 * interaction problem in an Eulerian context with the level set denote the
 * solid-fluid interface.
