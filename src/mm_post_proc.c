@@ -260,6 +260,7 @@ int PP_LAME_LAMBDA = -1;
 int VON_MISES_STRESS = -1;
 int VON_MISES_STRAIN = -1;
 int UNTRACKED_SPEC = -1;
+int FENEP_MAP = -1;
 
 int len_u_post_proc = 0;	/* size of dynamically allocated u_post_proc
 				 * actually is */
@@ -2240,6 +2241,74 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     local_post[VON_MISES_STRESS] = INV;
     local_lumped[VON_MISES_STRESS] = 1.;
   }
+
+  if (FENEP_MAP != -1 && pd->v[POLYMER_STRESS11] && vn->evssModel == FENEP) {
+    index = 0;
+    double lambda;
+    int a,b,i,j;
+    double a_fenep=0.;
+    double b_fenep=0.;
+    double f_fenep=0.;
+    double trace=0.;
+    double s[DIM][DIM];
+    for (mode = 0; mode < vn->modes; mode++) {
+      VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+      VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+      d_mup = NULL; 
+      trace = 0.;
+      for (a=0; a<VIM; a++)
+        {
+          for (b=0; b<VIM; b++)
+            {
+              s[a][b] = fv->S[mode][a][b];
+            }
+          trace += fv->S[mode][a][a];
+        }
+
+      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      // Polymer time constant
+      lambda = 0.0;
+      if(ve[mode]->time_constModel == CONSTANT)
+        {
+          lambda = ve[mode]->time_const;
+          b_fenep = ve[mode]->extensibility;
+        }      
+      /* Looks like these models are not working right now
+       *else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
+       * {
+       *   lambda = mup/ve[mode]->time_const;
+       * }
+       */
+      if(lambda==0.0)
+        {
+          EH( -1, "The conformation tensor needs a non-zero polymer time constant.");
+        }
+      if(mup==0.0)
+        {
+          EH( -1, "The conformation tensor needs a non-zero polymer viscosity.");
+        }
+      
+      f_fenep = b_fenep / (b_fenep - trace);
+      a_fenep = 1.0 / (1.0 - (double)dim/b_fenep);
+
+      if (pd->v[v_s[mode][0][0]]) {      
+        for (a = 0; a < VIM; a++) {
+          for (b = 0; b < VIM; b++) {
+            /* since the stress tensor is symmetric,
+               only assemble the upper half */ 
+            if (a <= b) {  
+              if (pd->v[v_s[mode][a][b]]) {
+                local_post[FENEP_MAP + index] = (mup/lambda)*(f_fenep*s[a][b] - a_fenep*delta(a,b));
+                local_lumped[FENEP_MAP + index] = 1.; 
+                index++;
+              }
+            }
+          }
+        }
+      }     
+    }
+  }
+
 
   if (USER_POST != -1) {
       /* calculate a user-specified post-processing variable */
@@ -6286,6 +6355,7 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "Error ZZ heat flux", &ERROR_ZZ_Q);
   iread = look_for_post_proc(ifp, "Error ZZ pressure", &ERROR_ZZ_P);
   iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
+  iread = look_for_post_proc(ifp, "FENEP Stress", &FENEP_MAP);
 
   /*
    * Initialize for surety before communication to other processors.
@@ -8926,7 +8996,36 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       SHELL_NORMALS = -1;
     }
-   
+  
+
+    if (FENEP_MAP != -1 && Num_Var_In_Type[POLYMER_STRESS11])
+    {
+      FENEP_MAP = index_post;
+      set_nv_tkud(rd, index, 0, 0, -2, "MS11","[1]",
+                  "FENEP stress xx", FALSE);
+      index++;
+      index_post++;
+      set_nv_tkud(rd, index, 0, 0, -2, "MS12","[1]",
+                  "FENEP stress xy", FALSE);
+
+      index++;
+      index_post++;
+      set_nv_tkud(rd, index, 0, 0, -2, "MS22","[1]",
+                  "FENEP stress yy", FALSE);
+      index++;
+      index_post++;
+      if (Num_Dim > 2)
+        {
+          EH(-1, "FENEP Stress not implemented for 3D");
+        }
+    }
+  else  
+    {
+      FENEP_MAP = -1; 
+    }
+
+
+ 
   /*
    * Porous flow post-processing setup section
    */

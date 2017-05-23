@@ -2647,6 +2647,43 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	   }
        }
 
+      if (vn_glob[mn]->evssModel == FENEP )
+        {
+          strcpy(search_string, "FENEP Extensibility Parameter");
+
+          model_read = look_for_modal_prop(imp, "FENEP Extensibility Parameter", 
+                                           vn_glob[mn]->modes, 
+                                           &matl_model,
+                                           modal_data,
+                                           es);
+
+          if( model_read < 1 )
+            {
+              if( model_read == -1) SPF(err_msg,"%s is missing", search_string);
+              if( model_read == -2) SPF(err_msg,"Only CONSTANT %s mode models supported.", search_string);
+              fprintf(stderr,"%s\n",err_msg);
+              exit(-1);
+            }
+
+          for(mm=0;mm<vn_glob[mn]->modes;mm++)
+            {
+              ve_glob[mn][mm]->extensibility = modal_data[mm];
+              ve_glob[mn][mm]->extensibilityModel = matl_model;
+            }
+
+          ECHO(es,echo_file);
+
+        }
+     else 
+       {
+         for(mm=0;mm<vn_glob[mn]->modes;mm++)
+           {
+             ve_glob[mn][mm]->extensibility=0.;
+             ve_glob[mn][mm]->extensibilityModel=CONSTANT;
+           }
+       }
+
+
       if (vn_glob[mn]->ConstitutiveEquation == PTT )
 	{
 	  strcpy(search_string, "PTT Xi parameter");

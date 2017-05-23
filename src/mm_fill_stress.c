@@ -2730,12 +2730,14 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 
       // get Geisekus mobility parameter
       alpha = ve[mode]->alpha;
+
+      // FENE-P Extensibility parameter
+      b_fenep = ve[mode]->extensibility;
       
       // get time constant
       if(ve[mode]->time_constModel == CONSTANT)
 	{
 	  lambda = ve[mode]->time_const;
-          b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 	}
       else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
 	{
@@ -2812,7 +2814,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 			      if ( pd->e[eqn] & T_MASS )
 				{
 				  mass = s_dot[a][b];
-				  mass *= wt_func * at * lambda * det_J * wt;
+				  mass *= wt_func * at * det_J * wt;
 				  mass *= h3;
 				  mass *= pd->etm[eqn][(LOG2_MASS)];
 				}
@@ -2828,7 +2830,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 				  if( ucwt != 0.) advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
 				  if( lcwt != 0.) advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
 
-				  advection *= wt_func * at * lambda *det_J * wt * h3;
+				  advection *= wt_func * at * det_J * wt * h3;
 				  advection *= pd->etm[eqn][(LOG2_ADVECTION)];
 				}     
 			    }
@@ -2908,9 +2910,20 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 		      if( ucwt != 0.) R_advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
 		      if( lcwt != 0.) R_advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
 
-		      R_source =   Z*s[a][b] - at * mup * ( g[a][b] +  gt[a][b]);
-			      
-		      if(alpha != 0.) R_source  +=  alpha * lambda*( s_dot_s[a][b]/mup);
+		      R_source =   Z*f_fenep*s[a][b] / lambda;
+		      if(a==b)
+                        {
+                          R_source -= Z*a_fenep/lambda;
+                        }	 
+                            
+		      if(alpha != 0.) 
+                        {
+                          R_source += alpha*(s_dot_s[a][b] * f_fenep*f_fenep - 2.0*f_fenep*a_fenep*s[a][b])/lambda;
+                          if (a==b)
+                            {
+                               R_source += alpha*a_fenep*a_fenep /lambda;
+                            }
+                        }
 		      
 		      for ( i=0; i<ei->dof[eqn]; i++)
 			{
@@ -2950,7 +2963,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 			      	       if ( pd->e[eqn] & T_MASS )
 					 {
 				  	  mass = s_dot[a][b];
-				  	  mass *= wt_func * d_at_dT[j] * lambda * det_J * wt;
+				  	  mass *= wt_func * d_at_dT[j] * det_J * wt;
 				  	  mass *= h3;
 				  	  mass *= pd->etm[eqn][(LOG2_MASS)];
 					 }
@@ -2966,29 +2979,13 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 				  	if( ucwt != 0.) advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
 				  	if( lcwt != 0.) advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
 
-				  	advection *= wt_func * d_at_dT[j] * lambda *det_J * wt * h3;
+				  	advection *= wt_func * d_at_dT[j] * det_J * wt * h3;
 				  	advection *= pd->etm[eqn][(LOG2_ADVECTION)];
 					}     
 			    	     }
 			  
-				  source    = 0.;
-				  source1    = 0.;
-				  if ( pd->e[eqn] & T_SOURCE )
-				    {
-				      source = -(g[a][b] +  gt[a][b])
-					*(at*d_mup->T[j]+mup*d_at_dT[j]);
-				      if(alpha != 0.)
-					{
-					  source1 -= s_dot_s[a][b]/(mup*mup)*d_mup->T[j];
-					  source1 *= lambda * alpha ;
-					  source  += source1;
-					}
-				      source *= wt_func * det_J * wt * h3;
-				      source *= pd->etm[eqn][(LOG2_SOURCE)];
-				    }
-				  
 				  lec->J[peqn][pvar][i][j] +=
-				    mass + advection + source;
+				    mass + advection;
 				}
 			    }
 			  
@@ -3026,7 +3023,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 						  mass *=  s_dot[a][b];
 						}
 					      
-					      mass *= pd->etm[eqn][(LOG2_MASS)] * at * lambda * det_J * wt * h3;
+					      mass *= pd->etm[eqn][(LOG2_MASS)] * at * det_J * wt * h3;
 					    }
 					  
 					}
@@ -3058,7 +3055,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 						}
 					      
 					      advection = advection_a +  advection_b;
-					      advection *= at * lambda * det_J * wt *h3;
+					      advection *= at * det_J * wt *h3;
 					      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
 					    }
 					}
@@ -3076,15 +3073,6 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 				      
 				      if ( pd->e[eqn] & T_SOURCE )
 					{
-					  source_c =  -at * d_mup_dv_pj * ( g[a][b] +  gt[a][b]);
-					  source_c *= wt_func;
-					  
-					  source_a = 0.;
-					  if(alpha != 0.)
-					    {
-					      source_a = -s_dot_s[a][b]/(mup*mup);
-					      source_a *= wt_func * alpha * lambda * d_mup_dv_pj;
-					    }
 					  
 					  source_b = 0.;
 					  if(supg != 0.)
@@ -3100,7 +3088,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					      source_b *= R_source;
 					    }
 					  
-					  source = source_a + source_b + source_c;
+					  source = source_b;
 					  source *=  det_J * wt * h3;
 					  source *= pd->etm[eqn][(LOG2_SOURCE)];
 					}
@@ -3109,78 +3097,6 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					mass + advection + diffusion + source;
 				    }
 				}
-			    }
-			  
-			  /*
-			   * J_S_c
-			   */
-			  var = MASS_FRACTION;
-			  if ( pd->v[var] )
-			    {
-			      for ( j=0; j<ei->dof[var]; j++)
-				{
-				  phi_j = bf[var]->phi[j];
-				  
-				  for ( w=0; w<pd->Num_Species_Eqn; w++)
-				    {
-				      
-				      source    = 0.;
-			  
-				      if ( pd->e[eqn] & T_SOURCE )
-					{
-					  source_a =   -at * d_mup->C[w][j] * ( g[a][b] +  gt[a][b]);
-					  source_b = 0.;
-					  if(alpha != 0.)
-					    {
-					      source_b -= s_dot_s[a][b]/(mup*mup);
-					      source_b *= alpha * lambda * d_mup->C[w][j];
-					    }
-					  source = source_a + source_b;
-					  source *= wt_func * det_J * wt * h3;
-					  source *= pd->etm[eqn][(LOG2_SOURCE)];
-					  
-					}
-				      
-				      if ( w > 1 )
-					{
-					  EH(-1, "Need more arrays for each species.");
-					}
-				      
-				      lec->J[peqn][MAX_PROB_VAR + w][i][j] +=
-					source;
-				    }
-				}
-			    }
-			  
-			  /*
-			   * J_S_P
-			   */
-			  var = PRESSURE;
-			  if ( pd->v[var] )
-			    {
-			      pvar = upd->vp[var];
-			      for ( j=0; j<ei->dof[var]; j++)
-				{
-				  phi_j = bf[var]->phi[j];
-				  
-				  source    = 0.;
-				  if ( pd->e[eqn] & T_SOURCE )
-				    {
-				      source_a +=  -at * d_mup->P[j] * ( g[a][b] +  gt[a][b]);
-				      source_b = 0.;
-				      if(alpha != 0.)
-					{
-					  source_b -= ( s_dot_s[a][b]/(mup*mup));
-					  source_b *= d_mup->P[j] * alpha * lambda;
-					}
-				      source  = source_a + source_b;
-				      source *= wt_func * det_J * wt * h3;
-				      source *= pd->etm[eqn][(LOG2_SOURCE)];
-				    }
-				  
-				  lec->J[peqn][pvar][i][j] +=
-				    source;
-				}		      
 			    }
 			  
 			  /*
@@ -3229,7 +3145,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 						}
 					      
 					      mass = mass_a + mass_b;
-					      mass *= at * lambda * wt * pd->etm[eqn][(LOG2_MASS)];
+					      mass *= at * wt * pd->etm[eqn][(LOG2_MASS)];
 					    }
 					}
 				      
@@ -3297,7 +3213,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					  
 					      advection = advection_a + advection_b + advection_c + advection_d;
 					      
-					      advection *=  wt * at * lambda * pd->etm[eqn][(LOG2_ADVECTION)];
+					      advection *=  wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
 					      
 					    }
 					}
@@ -3322,12 +3238,6 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 				      if ( pd->e[eqn] & T_SOURCE )
 					{
 					  source_a =  R_source;
-					  source_b = -at * (g[a][b] +  gt[a][b]);
-					  
-					  if(alpha != 0.)
-					    {
-					      source_b += -s_dot_s[a][b]/(mup*mup) * alpha * lambda;
-					    }
 					  
 					  source_a *= wt_func * (d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj);
 					  
@@ -3383,7 +3293,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 						  
 						  advection *=  phi_j* h3 * det_J ;
 						  
-						  advection *= wt_func * wt * at * lambda * pd->etm[eqn][(LOG2_ADVECTION)];
+						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
 						} 
 					    }
 					  
@@ -3398,20 +3308,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
 					    }
 					  
-					  /*
-					   * Source term...
-					   */
-					  
-					  source = 0.;		      
-					  
-					  if ( pd->e[eqn] & T_SOURCE )
-					    {
-					      source =  -at * mup *  phi_j *( (double)delta(a,p)*(double)delta(b,q) +  (double)delta(b,p)*(double)delta(a,q));
-					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
-					    }
-					  
-					  lec->J[peqn][pvar][i][j] +=
-					    advection + diffusion + source;
+					  lec->J[peqn][pvar][i][j] += advection + diffusion;
 					}
 				    }
 				}
@@ -3440,7 +3337,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 						{
 						  mass = (1.+2.*tt) * phi_j/dt * (double)delta(a,p) * (double)delta(b,q); 
 						  mass *= h3 * det_J;
-						  mass *= wt_func * at * lambda * wt * pd->etm[eqn][(LOG2_MASS)];
+						  mass *= wt_func * at * wt * pd->etm[eqn][(LOG2_MASS)];
 						}
 					    }
 					  
@@ -3463,7 +3360,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 						  
 						  advection *=  h3 * det_J ;
 						  
-						  advection *= wt_func * wt * at * lambda * pd->etm[eqn][(LOG2_ADVECTION)];
+						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
 						}
 					    }
 					  
