@@ -3489,14 +3489,19 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					      source_a  =  Z * phi_j * f_fenep * (double)delta(a,p) * (double)delta(b,q) / lambda;
  					      if( p == q) 
                                                 {
-                                                  source_a +=  s[a][b] * dZ_dtrace * phi_j;
+                                                  source_a +=  s[a][b] * dZ_dtrace * phi_j * f_fenep / lambda;
+                                                  if( a==b )
+                                                    {
+                                                      source_a -= dZ_dtrace*a_fenep*phi_j / lambda;
+                                                    }
                                                 }
 		      
 					      source_b  =0.;
 					      if(alpha != 0.)
 						{
-						  source_b  =  phi_j *  alpha * lambda *
-						    (s[q][b] * (double)delta(a,p) + s[a][p] * (double)delta(b,q))/mup;
+                                                  source_b = f_fenep*f_fenep * (s[q][b]*(double)delta(a,p)+s[a][p]*(double)delta(b,q));
+                                                  source_b -= 2.0 *f_fenep*a_fenep* (double)delta(a,p)*(double)delta(b,q);
+                                                  source_b *= phi_j * alpha/lambda;
 						}
 					      
 					      source  = source_a + source_b;
