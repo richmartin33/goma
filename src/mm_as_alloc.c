@@ -1817,6 +1817,8 @@ init_Viscoelastic_Constitutive(struct Viscoelastic_Constitutive *v)
   v->xiModel         = 0;
   v->eps             = (double)0;
   v->epsModel        = 0;
+  v->extensibility   = (double)0;
+  v->extensibilityModel = (double)0;
 
   return;
 }

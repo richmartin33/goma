@@ -210,6 +210,12 @@ evaluate_flux(
   double local_q = 0;               /* these are the actual fluxes  */
   double local_qconv = 0;
 
+  double mup = 0.;          // Polymer viscosity
+  double lambda = 0.;       // Viscoelastic time constant
+  double f_fenep = 0.;      // FENE-P Parameter
+  double a_fenep = 0.;      // FENE-P Parameter
+  double b_fenep = 0.;      // FENE-P Parameter
+
   double param[3] = {0.,0.,0.};
 
 #ifdef PARALLEL
@@ -703,7 +709,20 @@ evaluate_flux(
             			   {
 			             for ( ve_mode=0; ve_mode<vn->modes; ve_mode++)
                 		       {
-                  			ves[a][b] += fv->S[ve_mode][a][b];
+                                         if(vn->evssModel==FENEP)
+                                           {
+                                             mup = viscosity(ve[ve_mode]->gn, gamma, NULL);
+                                             if(ve[ve_mode]->time_constModel == CONSTANT)
+                                               {
+                                                 lambda = ve[ve_mode]->time_const;
+                                                 b_fenep = ve[ve_mode]->extensibility;
+                                               }
+                                             ves[a][b] += mup/lambda * (f_fenep*fv->S[ve_mode][a][b]-a_fenep*(double)delta(a,b));
+                                           }
+                                         else
+                                           {
+                                             ves[a][b] += fv->S[ve_mode][a][b];
+                                           }
                 			}
             			   }
         		      }

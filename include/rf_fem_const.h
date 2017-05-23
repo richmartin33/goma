@@ -67,6 +67,7 @@
 #define EVSS_G          1  /* Rajagopalan's formulation */
 #define EVSS_F          2  /* Fortin's formulation */
 #define EVSS_L          3  /* Level set solid-fluid formulation */
+#define FENEP           4  // FENE-P formulation
 
 /* Discontinuous Galerkin viscoelastic jacobian options */
 #define EXPLICIT_DG     1

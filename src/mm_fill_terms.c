@@ -2767,7 +2767,14 @@ assemble_momentum(dbl time,       /* current time */
   /*
    * Calculate the momentum stress tensor at the current gauss point
    */
-  fluid_stress( Pi, d_Pi );
+  if(vn->evssModel == FENEP)
+    {
+      fluid_stress_fenep(Pi, d_Pi);
+    }
+  else
+    {
+      fluid_stress( Pi, d_Pi );
+    }
 
   (void) momentum_source_term(f, df, time);
 
@@ -27908,6 +27915,705 @@ fluid_stress( double Pi[DIM][DIM],
         }
     }
 }
+
+
+void
+fluid_stress_fenep( double Pi[DIM][DIM],
+		   STRESS_DEPENDENCE_STRUCT *d_Pi)
+{  /*
+    * Vicosity and derivatives, we use this for collecting polymer
+    * viscosity terms when considering Non-Newontian fluids
+    */
+  dbl mu = 0.0;
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+
+  // Polymer viscosity and derivatives, polymer time constant
+  dbl mup = 0.0, lambda = 0.0;
+  VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+
+  // Solvent viscosity and derivatives
+  dbl mus = 0.0;
+  VISCOSITY_DEPENDENCE_STRUCT d_mus_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mus = &d_mus_struct;
+
+  // Numerical "adaptive" viscosity and derivatives
+  dbl mu_num;
+  dbl d_mun_dS[MAX_MODES][DIM][DIM][MDE];
+  dbl d_mun_dG[DIM][DIM][MDE];
+
+  // Dilational viscosity
+  dbl kappa = 0.0;
+  DILVISCOSITY_DEPENDENCE_STRUCT d_dilMu_struct;
+  DILVISCOSITY_DEPENDENCE_STRUCT *d_dilMu = &d_dilMu_struct;
+  int kappaWipesMu = 1;
+
+  // Shift factor and T dependence
+  dbl at = 0.0;
+  dbl d_at_dT[MDE];
+  //Some convenient viscosity variables
+  dbl wlf_denom;
+  dbl mu_over_mu_num = 0.0;
+
+  // Particle stress for suspension balance model
+  dbl tau_p[DIM][DIM];
+  dbl d_tau_p_dv[DIM][DIM][DIM][MDE];
+  dbl d_tau_p_dvd[DIM][DIM][DIM][MDE];
+  dbl d_tau_p_dy[DIM][DIM][MAX_CONC][MDE];
+  dbl d_tau_p_dmesh[DIM][DIM][DIM][MDE];
+  dbl d_tau_p_dp[DIM][DIM][MDE];
+  int w0;                               // Suspension species number
+
+  dbl *grad_v[DIM];		        // Gradient of v. */
+  dbl gamma[DIM][DIM];                  // Shear rate tensor based on velocity
+  dbl s[MAX_MODES][DIM][DIM];           // Polymer stress tensor
+  dbl gamma_cont[DIM][DIM];             // Shear rate tensor based on continuous gradient of velocity
+  dbl P;
+  dbl trace[MAX_MODES];
+
+  // Terms for FENE-P
+  dbl a_fenep=0.;
+  dbl f_fenep=0.;
+  dbl b_fenep=0.;
+
+  // Flag to use a Fortin DEVSS-G stress formulation
+  int evss_f;
+  int use_mup;                          // Flag for mup or mus on DEVSS-G term
+  int v_s[MAX_MODES][DIM][DIM];
+  int v_g[DIM][DIM];
+  int mode;                             // Index for modal viscoelastic counter
+
+  // Flag for doing dilational viscosity contributions
+  int do_dilational_visc = 0;
+  int dim, wim;
+  int a, b, p, q, j, w, c, var;
+  dbl (* grad_phi_e ) [DIM][DIM][DIM] = NULL;
+  int eqn = R_MOMENTUM1;
+  int fenep = 0;
+
+  dim   = pd->Num_Dim;
+  wim   = dim;
+  if(pd->CoordinateSystem == SWIRLING ||
+     pd->CoordinateSystem == PROJECTED_CARTESIAN)
+    {
+      wim = wim+1;
+    }
+
+  // Load up G and S pointers for non-Newtonian fluids
+  if( pd->v[POLYMER_STRESS11] )
+    {
+      (void) stress_eqn_pointer(v_s);
+      v_g[0][0] = VELOCITY_GRADIENT11;
+      v_g[0][1] = VELOCITY_GRADIENT12;
+      v_g[1][0] = VELOCITY_GRADIENT21;
+      v_g[1][1] = VELOCITY_GRADIENT22;
+      v_g[0][2] = VELOCITY_GRADIENT13;
+      v_g[1][2] = VELOCITY_GRADIENT23;
+      v_g[2][0] = VELOCITY_GRADIENT31;
+      v_g[2][1] = VELOCITY_GRADIENT32;
+      v_g[2][2] = VELOCITY_GRADIENT33;
+    }
+
+  memset(trace, 0.0, sizeof(double) * MAX_MODES);
+
+  // Set flag for FENE-P
+  if(vn->evssModel == FENEP)
+    {
+      fenep = 1;
+    }
+
+  // Load up pressure
+  P = fv->P;
+
+  // If d_Pi == NULL, we won't need the viscosity dependencies
+  if(d_Pi == NULL)
+    {
+      d_mu  = NULL;
+      d_mus = NULL;
+      d_mup = NULL;
+    }
+  
+
+  for(a=0; a<VIM; a++)
+    {
+      grad_v[a] = fv->grad_v[a];
+    }
+
+  memset(tau_p,         0, sizeof(double) * DIM*DIM);
+  memset(d_tau_p_dv,    0, sizeof(double) * DIM*DIM*DIM*MDE);
+  memset(d_tau_p_dvd,   0, sizeof(double) * DIM*DIM*DIM*MDE);
+  memset(d_tau_p_dy,    0, sizeof(double) * DIM*DIM*MAX_CONC*MDE);
+  memset(d_tau_p_dmesh, 0, sizeof(double) * DIM*DIM*DIM*MDE);
+  memset(d_tau_p_dp,    0, sizeof(double) * DIM*DIM*MDE);
+  if(cr->MassFluxModel == DM_SUSPENSION_BALANCE || cr->MassFluxModel == HYDRODYNAMIC_QTENSOR)
+    {
+      w0 = gn->sus_species_no;
+      particle_stress(tau_p, d_tau_p_dv, d_tau_p_dvd,d_tau_p_dy,d_tau_p_dmesh,d_tau_p_dp, w0);
+    }
+
+  // Load up DEVSS-G flag and Gs
+  if(pd->v[POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel==FENEP))
+    {
+      evss_f = 1;
+    }
+  else
+    {
+      evss_f = 0;
+    }
+  if(evss_f)
+    {
+      for(a=0; a<VIM; a++)
+  	{
+  	  for(b=0; b<VIM; b++)
+  	    {
+  	      gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
+  	    }
+  	}
+    }
+  else
+    {
+      memset(gamma_cont, 0, sizeof(double)*DIM*DIM);
+    }
+
+  if ( pd->v[POLYMER_STRESS11] )
+  {
+    memset( s, 0, sizeof(dbl)*DIM*DIM*MAX_MODES);
+    for (mode=0; mode<vn->modes; mode++) {
+      trace[mode] = 0.;
+      for (a = 0; a < VIM; a++) {
+        for (b = 0; b < VIM; b++) {
+          s[mode][a][b] = fv->S[mode][a][b];
+        }
+        trace[mode] += s[mode][a][a];
+      }
+    }
+  }
+
+  // Load shear rate tensor
+  for(a=0; a<VIM; a++)
+    {
+      for(b=0; b<VIM; b++)
+  	{
+  	  gamma[a][b] = grad_v[a][b] + grad_v[b][a];
+  	}
+    }
+
+  // Viscosity for generalized Newtonian or solvent viscosity
+  mus = viscosity(gn, gamma, d_mus);
+
+  // Load up fluid stress terms in Pi
+  for(a=0; a<VIM; a++)
+    {
+      for(b=0; b<VIM; b++)
+        {
+          Pi[a][b] = -P*(double)delta(a,b) + mus*gamma[a][b] - tau_p[a][b];
+	  
+	  if(pd->v[POLYMER_STRESS11])
+	    {
+	      for(mode=0; mode<vn->modes; mode++)
+		{
+		  // Polymer viscosity
+		  mup = viscosity(ve[mode]->gn, gamma, d_mup);
+		  // Polymer time constant
+		  lambda = 0.0;
+		  if(ve[mode]->time_constModel == CONSTANT)
+		    {
+		      lambda = ve[mode]->time_const;
+                      b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+		    }
+                  // FENE-P parameters
+                  f_fenep = b_fenep / (b_fenep - trace[mode]);
+                  a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+
+		  // DEVSS-G term using mup
+		  if(evss_f)
+		    {
+		      Pi[a][b] += mup*(gamma[a][b]-gamma_cont[a][b]);
+		    }
+
+		  // PolymerStress contribution
+		  if(vn->evssModel == FENEP)
+		    {
+		      Pi[a][b] += mup/lambda*(f_fenep*s[mode][a][b]-a_fenep*(double)delta(a,b));
+		    }
+		  else
+		    {
+		      Pi[a][b] += fv->S[mode][a][b];
+		    }
+		}
+            }
+        }
+    }
+
+  // Time for Jacobian terms
+  var = TEMPERATURE;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(j=0; j<ei->dof[var]; j++)
+                {
+		  d_Pi->T[p][q][j] = d_mus->T[j]*gamma[p][q];
+
+		  if(pd->v[POLYMER_STRESS11])
+		    {
+		      for(mode=0; mode<vn->modes; mode++)
+			{
+			  // Polymer viscosity
+			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			  // Polymer time constant
+			  lambda = 0.0;
+			  if(ve[mode]->time_constModel == CONSTANT)
+			    {
+			      lambda = ve[mode]->time_const;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                            }
+                          // FENE-P parameters
+                          f_fenep = b_fenep / (b_fenep - trace[mode]);
+                          a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+			  if(evss_f)
+			    {
+			      d_Pi->T[p][q][j] += d_mup->T[j]*(gamma[p][q]-gamma_cont[p][q]);
+			    }
+			  if(fenep)
+			    {
+			      d_Pi->T[p][q][j] += d_mup->T[j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+			    }			  
+			}		      
+		    }
+		}
+	    }
+	}
+    }
+
+  var = BOND_EVOLUTION;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(j=0; j<ei->dof[var]; j++)
+                {
+		  d_Pi->nn[p][q][j] = d_mus->nn[j]*gamma[p][q];
+
+		  if(pd->v[POLYMER_STRESS11])
+		    {
+		      for(mode=0; mode<vn->modes; mode++)
+			{
+			  // Polymer viscosity
+			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			  // Polymer time constant
+			  lambda = 0.0;
+			  if(ve[mode]->time_constModel == CONSTANT)
+			    {
+			      lambda = ve[mode]->time_const;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                            }
+                          // FENE-P parameters
+                          f_fenep = b_fenep / (b_fenep - trace[mode]);
+                          a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+
+			  if(evss_f)
+			    {
+			      d_Pi->nn[p][q][j] += d_mup->nn[j]*(gamma[p][q]-gamma_cont[p][q]);
+			    }
+			  if(fenep)
+			    {
+			      d_Pi->nn[p][q][j] += d_mup->nn[j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+			    }			  
+			}		      
+		    }
+		}
+	    }
+	}
+    }
+
+#ifdef COUPLED_FILL
+  var = FILL;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(j=0; j<ei->dof[var]; j++)
+                {
+		  d_Pi->F[p][q][j] = d_mus->F[j]*gamma[p][q];
+
+		  if(pd->v[POLYMER_STRESS11])
+		    {
+		      for(mode=0; mode<vn->modes; mode++)
+			{
+			  // Polymer viscosity
+			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			  // Polymer time constant
+			  lambda = 0.0;
+			  if(ve[mode]->time_constModel == CONSTANT)
+			    {
+			      lambda = ve[mode]->time_const;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                            }
+                          // FENE-P parameters
+                          f_fenep = b_fenep / (b_fenep - trace[mode]);
+                          a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+			  if(evss_f)
+			    {
+			      d_Pi->F[p][q][j] += d_mup->F[j]*(gamma[p][q]-gamma_cont[p][q]);
+			    }
+			  if(fenep)
+			    {
+			      d_Pi->F[p][q][j] += d_mup->F[j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+			    }			  
+			}		      
+		    }
+		}
+	    }
+	}
+    }
+#endif
+
+  var = PHASE1;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(a=0; a<pfd->num_phase_funcs; a++)
+		{
+		  var = PHASE1 + a;
+		  for(j=0; j<ei->dof[var]; j++)
+		    {
+		      d_Pi->pf[p][q][a][j] = d_mus->pf[a][j]*gamma[p][q];
+		      
+		      if(pd->v[POLYMER_STRESS11])
+			{
+			  for(mode=0; mode<vn->modes; mode++)
+			    {
+			      // Polymer viscosity
+			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			      // Polymer time constant
+			      lambda = 0.0;
+			      if(ve[mode]->time_constModel == CONSTANT)
+				{
+				  lambda = ve[mode]->time_const;
+                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                                }
+                              // FENE-P parameters
+                              f_fenep = b_fenep / (b_fenep - trace[mode]);
+                              a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+			      if(evss_f)
+				{
+				  d_Pi->pf[p][q][a][j] += d_mup->pf[a][j]*(gamma[p][q]-gamma_cont[p][q]);
+				}
+			      if(fenep)
+				{
+				  d_Pi->pf[p][q][a][j] += d_mup->pf[a][j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+				}			  
+			    }		      
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+  var = VELOCITY1;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(b=0; b<wim; b++)
+		{
+		  for(j=0; j<ei->dof[var]; j++)
+		    {
+                      d_Pi->v[p][q][b][j]  = mus*bf[var+q]->grad_phi_e[j][b][p][q];
+	              d_Pi->v[p][q][b][j] += mus*bf[var+p]->grad_phi_e[j][b][q][p];
+
+		      d_Pi->v[p][q][b][j] += d_mus->v[b][j]*gamma[p][q];
+		      d_Pi->v[p][q][b][j] -= d_tau_p_dv[p][q][b][j];
+		      if(pd->v[POLYMER_STRESS11])
+			{
+			  for(mode=0; mode<vn->modes; mode++)
+			    {
+			      // Polymer viscosity
+			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			      // Polymer time constant
+			      lambda = 0.0;
+			      if(ve[mode]->time_constModel == CONSTANT)
+				{
+				  lambda = ve[mode]->time_const;
+                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                                }
+                              // FENE-P parameters
+                              f_fenep = b_fenep / (b_fenep - trace[mode]);
+                              a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+
+			      if(evss_f)
+				{
+				  d_Pi->v[p][q][b][j] += mup*bf[var+q]->grad_phi_e[j][b][p][q];
+				  d_Pi->v[p][q][b][j] += mup*bf[var+p]->grad_phi_e[j][b][q][p];
+				  d_Pi->v[p][q][b][j] += d_mup->v[b][j]*(gamma[p][q]-gamma_cont[p][q]);
+				}
+			      if(fenep)
+				{
+				  d_Pi->v[p][q][b][j] += d_mup->v[b][j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+				}			  
+			    }		      
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+
+  var = VORT_DIR1;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+              for(b=0; b<dim; b++)
+                {
+                  for(j=0; j<ei->dof[var]; j++)
+                    {
+                      d_Pi->vd[p][q][b][j] = - d_tau_p_dvd[p][q][b][j];
+                    }
+                }
+            }
+	}
+    }
+
+  var = MESH_DISPLACEMENT1;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(b=0; b<dim; b++)
+		{
+		  for(j=0; j<ei->dof[var]; j++)
+		    {
+	              d_Pi->X[p][q][b][j]  = mus*fv->d_grad_v_dmesh[p][q][b][j];
+                      d_Pi->X[p][q][b][j] += mus*fv->d_grad_v_dmesh[q][p][b][j];
+
+		      d_Pi->X[p][q][b][j] += d_mus->X[b][j]*gamma[p][q];
+		      d_Pi->X[p][q][b][j] -= d_tau_p_dmesh[p][q][b][j];
+		      if(pd->v[POLYMER_STRESS11])
+			{
+			  for(mode=0; mode<vn->modes; mode++)
+			    {
+			      // Polymer viscosity
+			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			      // Polymer time constant
+			      lambda = 0.0;
+			      if(ve[mode]->time_constModel == CONSTANT)
+				{
+				  lambda = ve[mode]->time_const;
+                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                                }
+                              // FENE-P parameters
+                              f_fenep = b_fenep / (b_fenep - trace[mode]);
+                              a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+
+			      if(evss_f)
+				{
+				  d_Pi->X[p][q][b][j] += mup*fv->d_grad_v_dmesh[p][q][b][j];
+				  d_Pi->X[p][q][b][j] += mup*fv->d_grad_v_dmesh[q][p][b][j];
+				  d_Pi->X[p][q][b][j] += d_mup->X[b][j]*(gamma[p][q]-gamma_cont[p][q]);
+				}
+			      if(fenep)
+				{
+				  d_Pi->X[p][q][b][j] += d_mup->X[b][j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+				}			  
+			    }		      
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+  var = POLYMER_STRESS11;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+	{
+	  for(q=0; q<VIM; q++)
+	    {
+	      for(mode=0; mode<vn->modes; mode++)
+		{
+		  // Polymer viscosity
+		  mup = viscosity(ve[mode]->gn, gamma, d_mup);
+		  // Polymer time constant
+		  lambda = 0.0;
+		  if(ve[mode]->time_constModel == CONSTANT)
+		    {
+		      lambda = ve[mode]->time_const;
+                      b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                    }
+                  // FENE-P parameters
+                  f_fenep = b_fenep / (b_fenep - trace[mode]);
+                  a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+
+                  for(a=0; a<VIM; a++)
+                    {
+                      for(b=0; b<VIM; b++)
+                        {
+                          var = v_s[mode][a][b];
+                          for(j=0; j<ei->dof[var]; j++)
+                            {
+			      if(fenep)
+				{
+				  d_Pi->S[p][q][mode][a][b][j] = mup/lambda*f_fenep*delta(a,p)*delta(b,q)*bf[var]->phi[j];
+				}
+			      else
+				{
+				  d_Pi->S[p][q][mode][a][b][j] = delta(a,p)*delta(b,q)*bf[var]->phi[j];
+				}
+			    }
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+  var = VELOCITY_GRADIENT11;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+	{
+	  for(q=0; q<VIM; q++)
+	    {
+	      for(a=0; a<VIM; a++)
+		{
+		  for(b=0; b<VIM; b++)
+		    {
+		      var = v_g[a][b];
+                      for(j=0; j<ei->dof[var]; j++)
+                        {
+	                  d_Pi->g[p][q][a][b][j] = 0.0;
+
+			  if(pd->v[POLYMER_STRESS11])
+			    {
+			      if(evss_f)
+				{
+				  for(mode=0; mode<vn->modes; mode++)
+				    {
+				      // Polymer viscosity
+				      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+				      
+				      d_Pi->g[p][q][a][b][j] -= mup*(delta(p,a)*delta(q,b)+delta(p,b)*delta(q,a))*bf[var]->phi[j];
+				    }
+				}			  
+			    }
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+
+  var = MASS_FRACTION;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(w=0; w<pd->Num_Species_Eqn; w++)
+		{
+		  for(j=0; j<ei->dof[var]; j++)
+		    {
+		      d_Pi->C[p][q][w][j] = d_mus->C[w][j]*gamma[p][q] - d_tau_p_dy[p][q][w][j];
+		      
+		      if(pd->v[POLYMER_STRESS11])
+			{
+			  for(mode=0; mode<vn->modes; mode++)
+			    {
+			      // Polymer viscosity
+			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			      // Polymer time constant
+			      lambda = 0.0;
+			      if(ve[mode]->time_constModel == CONSTANT)
+				{
+				  lambda = ve[mode]->time_const;
+                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                                }
+                              // FENE-P parameters
+                              f_fenep = b_fenep / (b_fenep - trace[mode]);
+                              a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+			      if(evss_f)
+				{
+				  d_Pi->C[p][q][w][j] += d_mup->C[w][j]*(gamma[p][q]-gamma_cont[p][q]);
+				}
+			      if(fenep)
+				{
+				  d_Pi->C[p][q][w][j] += d_mup->C[w][j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+				}			  
+			    }		      
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+  var = PRESSURE;
+  if(d_Pi!=NULL && pd->v[var])
+    {
+      for(p=0; p<VIM; p++)
+        {
+          for(q=0; q<VIM; q++)
+            {
+	      for(j=0; j<ei->dof[var]; j++)
+                {
+		  d_Pi->P[p][q][j] = -delta(p,q)*bf[var]->phi[j] + d_mus->P[j]*gamma[p][q];
+
+		  if(pd->v[POLYMER_STRESS11])
+		    {
+		      for(mode=0; mode<vn->modes; mode++)
+			{
+			  // Polymer viscosity
+			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
+			  // Polymer time constant
+			  lambda = 0.0;
+			  if(ve[mode]->time_constModel == CONSTANT)
+			    {
+			      lambda = ve[mode]->time_const;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
+                            }
+                          // FENE-P parameters
+                          f_fenep = b_fenep / (b_fenep - trace[mode]);
+                          a_fenep = 1.0 / (1.0 - (double)dim / b_fenep);
+			  if(evss_f)
+			    {
+			      d_Pi->P[p][q][j] += d_mup->P[j]*(gamma[p][q]-gamma_cont[p][q]);
+			    }
+			  if(fenep)
+			    {
+			      d_Pi->P[p][q][j] += d_mup->P[j]/lambda*(f_fenep*s[mode][p][q]-a_fenep*(double)delta(p,q));
+			    }			  
+			}		      
+		    }
+		}
+	    }
+	}
+    }
+
+}// fluid_stress_fenep
+
 
 void
 heat_flux( double q[DIM],

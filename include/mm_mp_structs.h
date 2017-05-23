@@ -941,6 +941,9 @@ struct Viscoelastic_Constitutive
 
   dbl eps;                   /* This is the PTT elongational parameter */
   int epsModel;
+
+  dbl extensibility;        // This is the extensibility parameter for FENE-P
+  int extensibilityModel;
 };
 typedef struct  Viscoelastic_Constitutive VISC_CONST_STRUCT;
    
