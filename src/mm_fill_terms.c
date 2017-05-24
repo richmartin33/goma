@@ -2767,7 +2767,7 @@ assemble_momentum(dbl time,       /* current time */
   /*
    * Calculate the momentum stress tensor at the current gauss point
    */
-  if(vn->evssModel == FENEP)
+  if(vn->ConstitutiveEquation == FENEP)
     {
       fluid_stress_fenep(Pi, d_Pi);
     }
@@ -28018,7 +28018,7 @@ fluid_stress_fenep( double Pi[DIM][DIM],
   memset(trace, 0.0, sizeof(double) * MAX_MODES);
 
   // Set flag for FENE-P
-  if(vn->evssModel == FENEP)
+  if(vn->ConstitutiveEquation == FENEP)
     {
       fenep = 1;
     }
@@ -28053,7 +28053,7 @@ fluid_stress_fenep( double Pi[DIM][DIM],
     }
 
   // Load up DEVSS-G flag and Gs
-  if(pd->v[POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel==FENEP))
+  if(pd->v[POLYMER_STRESS11] && (vn->evssModel == EVSS_F))
     {
       evss_f = 1;
     }
@@ -28133,7 +28133,7 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 		    }
 
 		  // PolymerStress contribution
-		  if(vn->evssModel == FENEP)
+		  if(vn->ConstitutiveEquation == FENEP)
 		    {
 		      Pi[a][b] += mup/lambda*(f_fenep*s[mode][a][b]-a_fenep*(double)delta(a,b));
 		    }

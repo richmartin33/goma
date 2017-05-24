@@ -1510,7 +1510,7 @@ matrix_fill(
 	  if (err) return -1;
 #endif
 	}
-      else if (vn->evssModel==FENEP)
+      else if (vn->ConstitutiveModel==FENEP)
         {
           err = assemble_stress_fenep(theta, delta_t, pg_data.hsquared,
                                         pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);

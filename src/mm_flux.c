@@ -109,6 +109,7 @@ evaluate_flux(
   int i;			/* Index for the local node number - row    */
   int ip = 0, a, b, c, p, w = -1;
   int mn;
+  int m,n;
   int var;
   int *n_dof=NULL;
   int dof_map[MDE];
@@ -215,6 +216,7 @@ evaluate_flux(
   double f_fenep = 0.;      // FENE-P Parameter
   double a_fenep = 0.;      // FENE-P Parameter
   double b_fenep = 0.;      // FENE-P Parameter
+  double trace = 0.;
 
   double param[3] = {0.,0.,0.};
 
@@ -709,13 +711,20 @@ evaluate_flux(
             			   {
 			             for ( ve_mode=0; ve_mode<vn->modes; ve_mode++)
                 		       {
-                                         if(vn->evssModel==FENEP)
+                                         if(vn->ConstitutiveEquation==FENEP)
                                            {
                                              mup = viscosity(ve[ve_mode]->gn, gamma, NULL);
+                                             trace=0.0;
+                                             for (m=0; m<VIM; m++)
+                                               {
+                                                 trace += fv->S[ve_mode][m][m];
+                                               }
+                                             b_fenep = ve[ve_mode]->extensibility;
+                                             f_fenep = b_fenep / (b_fenep - trace);
+                                             a_fenep = 1.0 / (1.0 - (double)dim/b_fenep);
                                              if(ve[ve_mode]->time_constModel == CONSTANT)
                                                {
                                                  lambda = ve[ve_mode]->time_const;
-                                                 b_fenep = ve[ve_mode]->extensibility;
                                                }
                                              ves[a][b] += mup/lambda * (f_fenep*fv->S[ve_mode][a][b]-a_fenep*(double)delta(a,b));
                                            }

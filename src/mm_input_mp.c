@@ -2300,6 +2300,10 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     {
       vn_glob[mn]->ConstitutiveEquation = PTT;
     } 
+  else if ( !strcmp(model_name, "FENEP") )
+    {
+      vn_glob[mn]->ConstitutiveEquation = FENEP;
+    }
   else if ( !strcmp(model_name, "NOPOLYMER") )
     {
       vn_glob[mn]->ConstitutiveEquation = NOPOLYMER;
@@ -2349,10 +2353,6 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	{
 	  vn_glob[mn]->evssModel = EVSS_L;
 	}
-      else if ( !strcmp(model_name, "FENEP") )
-        {
-          vn_glob[mn]->evssModel = FENEP;
-        }
       else
 	{
 	  if( vn_glob[mn]->ConstitutiveEquation == PTT ) 
@@ -2647,7 +2647,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	   }
        }
 
-      if (vn_glob[mn]->evssModel == FENEP )
+      if (vn_glob[mn]->ConstitutiveEquation == FENEP )
         {
           strcpy(search_string, "FENEP Extensibility Parameter");
 

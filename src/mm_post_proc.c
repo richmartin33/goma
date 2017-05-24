@@ -2242,7 +2242,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     local_lumped[VON_MISES_STRESS] = 1.;
   }
 
-  if (FENEP_MAP != -1 && pd->v[POLYMER_STRESS11] && vn->evssModel == FENEP) {
+  if (FENEP_MAP != -1 && pd->v[POLYMER_STRESS11] && vn->ConstitutiveEquation == FENEP) {
     index = 0;
     double lambda;
     int a,b,i,j;
@@ -2266,12 +2266,12 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
         }
 
       mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      b_fenep = ve[mode]->extensibility;
       // Polymer time constant
       lambda = 0.0;
       if(ve[mode]->time_constModel == CONSTANT)
         {
           lambda = ve[mode]->time_const;
-          b_fenep = ve[mode]->extensibility;
         }      
       /* Looks like these models are not working right now
        *else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
