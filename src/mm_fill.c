@@ -1479,7 +1479,7 @@ matrix_fill(
        */
       do_LSA_mods(LSA_VOLUME);
 
-      if(vn->evssModel == EVSS_F)
+      if(vn->evssModel == EVSS_F && vn->ConstitutiveEquation!=FENEP)
 	{
 	  err = assemble_stress_fortin(theta, delta_t, pg_data.hsquared,
 				       pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
@@ -1510,7 +1510,7 @@ matrix_fill(
 	  if (err) return -1;
 #endif
 	}
-      else if (vn->ConstitutiveModel==FENEP)
+      else if (vn->ConstitutiveEquation==FENEP)
         {
           err = assemble_stress_fenep(theta, delta_t, pg_data.hsquared,
                                         pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);

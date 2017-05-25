@@ -108,6 +108,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS];	/* number of variables to overwri
 #define WHITE_METZNER   7
 #define OLDROYDB 	8 
 #define PTT             9
+#define FENEP           10
 #define MODIFIED_WLF    39
 
 /* MMH */

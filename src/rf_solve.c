@@ -119,6 +119,135 @@ PROTO(( int,
 		double *,
 		int ));
 
+
+
+void
+initial_guess_stress_to_conf(double *x, int num_total_nodes)
+{
+  // assume there is only 1 mode atm
+  int idx,i,j,INFO;
+
+  double s[VIM][VIM];
+  double log_s[VIM][VIM];
+  int s_idx[3];
+  int dim = VIM;
+  int v,node;
+  dbl gamma_dot[DIM][DIM];
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mu_struct;
+
+  int mode = 0;
+  double lambda;
+  double mup;
+  double trace=0.;
+  double a_fenep=0.;
+  double f_fenep=0.;
+  double b_fenep=0.;
+  double soln[3];
+  double t[3][3];
+  double b[3];
+  double beta[3] = {0., 0., 0.};
+  double A[9];
+  int LDA=3;
+  int LDB=3;
+  int IPIV[3];
+  int N,NRHS;
+
+  N=3;
+  NRHS=1;
+
+  memset(A, 0., sizeof(double)*9);
+
+  memset(IPIV, 0, sizeof(int)*3);
+
+  ve[mode]  = ve_glob[0][mode];
+  
+  for (node = 0; node < num_total_nodes; node++) {
+    idx = 0;
+    for (v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
+      s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
+      idx++;
+    }
+
+    mup = viscosity(ve[mode]->gn, gamma, d_mup);
+    b_fenep = ve[mode]->extensibility;    
+    a_fenep = 1.0 / (1.0 - 2.0/b_fenep);
+
+    if(ve[mode]->time_constModel == CONSTANT)
+      {
+	lambda = ve[mode]->time_const;
+      }
+    else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
+      {
+	lambda = mup/ve[mode]->time_const;
+      }
+
+    // skip node if stress variables not found
+    if (s_idx[0] == -1 || s_idx[1] == -1 || s_idx[2] == -1) continue;
+
+    // get conformation tensor from initial guess
+    s[0][0] = x[s_idx[0]];
+    s[0][1] = x[s_idx[1]];
+    s[1][0] = x[s_idx[1]];
+    s[1][1] = x[s_idx[2]];
+
+    beta[0] = s[0][0] * lambda/mup + a_fenep;
+    beta[1] = s[0][1] * lambda/mup;
+    beta[2] = s[1][1] * lambda/mup + a_fenep;
+
+    t[0][0] = b_fenep+beta[0];
+    t[0][1] = 0.;
+    t[0][2] = beta[0];
+
+    t[1][0] = beta[1];
+    t[1][1] = b_fenep;
+    t[1][2] = beta[1];
+
+    t[2][0] = beta[2];
+    t[2][1] = 0.;
+    t[2][2] = b_fenep+beta[2];
+
+    b[0] = b_fenep*beta[0];
+    b[1] = b_fenep*beta[1];
+    b[2] = b_fenep*beta[2];
+
+    for(i=0; i<3; i++)
+      {
+        for(j=0; j<3; j++)
+          {
+            A[i*3+j] = t[j][i];
+          }
+      }
+
+    dgesv_(&N, &NRHS, A, &LDA, IPIV, b, &LDB, &INFO);
+
+    s[0][0] = b[0];
+    s[0][1] = b[1];
+    s[1][0] = b[1];
+    s[1][1] = b[2];   
+ 
+    x[s_idx[0]] = s[0][0];
+    x[s_idx[1]] = s[0][1];
+    x[s_idx[2]] = s[1][1];
+
+    printf("Node %d:\n", node);
+
+    printf("C = [\n");
+    printf("]\n");
+
+    printf("C = [\n");
+    for (i = 0; i < 2; i++) {
+      for (j = 0; j < 2; j++) {
+	printf("%g ", s[i][j]);
+      }
+      printf("\n");
+    }
+    printf("]\n");
+    
+  }
+}
+
+
 void
 solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	      Dpi *dpi,		 /* distributed processing information       */
@@ -743,6 +872,8 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	    }
 	}
     }
+
+  initial_guess_stress_to_conf(x, num_total_nodes);
 
   /* Load external fields from import vectors xnv_in & xev_in */
 #ifdef LIBRARY_MODE

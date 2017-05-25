@@ -28117,10 +28117,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 		  mup = viscosity(ve[mode]->gn, gamma, d_mup);
 		  // Polymer time constant
 		  lambda = 0.0;
+                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 		  if(ve[mode]->time_constModel == CONSTANT)
 		    {
 		      lambda = ve[mode]->time_const;
-                      b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 		    }
                   // FENE-P parameters
                   f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28166,10 +28166,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			  // Polymer time constant
 			  lambda = 0.0;
+                          b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			  if(ve[mode]->time_constModel == CONSTANT)
 			    {
 			      lambda = ve[mode]->time_const;
-                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                             }
                           // FENE-P parameters
                           f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28208,10 +28208,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			  // Polymer time constant
 			  lambda = 0.0;
+                          b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			  if(ve[mode]->time_constModel == CONSTANT)
 			    {
 			      lambda = ve[mode]->time_const;
-                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                             }
                           // FENE-P parameters
                           f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28252,10 +28252,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			  // Polymer time constant
 			  lambda = 0.0;
+                          b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			  if(ve[mode]->time_constModel == CONSTANT)
 			    {
 			      lambda = ve[mode]->time_const;
-                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                             }
                           // FENE-P parameters
                           f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28298,10 +28298,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			      // Polymer time constant
 			      lambda = 0.0;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			      if(ve[mode]->time_constModel == CONSTANT)
 				{
 				  lambda = ve[mode]->time_const;
-                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                                 }
                               // FENE-P parameters
                               f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28346,10 +28346,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			      // Polymer time constant
 			      lambda = 0.0;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			      if(ve[mode]->time_constModel == CONSTANT)
 				{
 				  lambda = ve[mode]->time_const;
-                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                                 }
                               // FENE-P parameters
                               f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28416,10 +28416,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			      // Polymer time constant
 			      lambda = 0.0;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			      if(ve[mode]->time_constModel == CONSTANT)
 				{
 				  lambda = ve[mode]->time_const;
-                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                                 }
                               // FENE-P parameters
                               f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28456,10 +28456,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 		  mup = viscosity(ve[mode]->gn, gamma, d_mup);
 		  // Polymer time constant
 		  lambda = 0.0;
+                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 		  if(ve[mode]->time_constModel == CONSTANT)
 		    {
 		      lambda = ve[mode]->time_const;
-                      b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                     }
                   // FENE-P parameters
                   f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28546,10 +28546,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			      mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			      // Polymer time constant
 			      lambda = 0.0;
+                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			      if(ve[mode]->time_constModel == CONSTANT)
 				{
 				  lambda = ve[mode]->time_const;
-                                  b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                                 }
                               // FENE-P parameters
                               f_fenep = b_fenep / (b_fenep - trace[mode]);
@@ -28589,10 +28589,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			  mup = viscosity(ve[mode]->gn, gamma, d_mup);
 			  // Polymer time constant
 			  lambda = 0.0;
+                          b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
 			  if(ve[mode]->time_constModel == CONSTANT)
 			    {
 			      lambda = ve[mode]->time_const;
-                              b_fenep = ve[mode]->extensibility; // FENE-P extensibility parameter
                             }
                           // FENE-P parameters
                           f_fenep = b_fenep / (b_fenep - trace[mode]);

@@ -3329,18 +3329,7 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					  
 					  if ( pd->e[eqn] & T_SOURCE )
 					    {
-					      source_a  =  phi_j * f_fenep * (double)delta(a,p) * (double)delta(b,q) / lambda;
- 					      if( p == q) 
-                                                {
-                                                  source_a +=  s[a][b] phi_j * f_fenep / lambda;
-                                                  if( a==b )
-                                                    {
-                                                      source_a -= a_fenep*phi_j / lambda;
-                                                    }
-                                                }
-		      
-					      source  = source_a;
-					      
+					      source  =  phi_j * f_fenep * (double)delta(a,p) * (double)delta(b,q) / lambda;
 					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
 					      
 					    }
@@ -3352,11 +3341,11 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 				}
 			    }
 			}
-		    }
-		}
-	    }
-	}
-    }
+		    } // if a<=b
+		} // for b
+	    } // for a
+	} // Assemble Jacobian
+    } // for modes
   
   return(status);
 }
