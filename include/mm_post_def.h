@@ -550,6 +550,7 @@ extern int PP_LAME_LAMBDA;     /* Lame LAMBDA coefficient for solid/mesh */
 extern int VON_MISES_STRAIN;
 extern int VON_MISES_STRESS;
 extern int UNTRACKED_SPEC;		/*Untracked Species Concentration */
+extern int LOG_CONF_MAP;               // Map log conf to stress
 
 
 /*
