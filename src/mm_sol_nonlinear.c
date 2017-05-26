@@ -944,6 +944,12 @@ EH(-1,"version not compiled with frontal solver");
 				     &num_total_nodes,
 				     &h_elem_avg, &U_norm, NULL);
 	      
+              numerical_jacobian_compute(ams, x, resid_vector, delta_t, theta, 
+                                 x_old, x_older, xdot, xdot_old,x_update,
+                                 num_total_nodes, First_Elem_Side_BC_Array, 
+                                 Debug_Flag, time_value, exo, dpi, 
+                                 &h_elem_avg, &U_norm);
+
 	      a_end = ut();
 	      if (err == -1) {
                 return_value = -1;

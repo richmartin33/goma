@@ -71,6 +71,10 @@ EXTERN int free_problem
 PROTO((Exo_DB *,		/* exo - ptr to finite element mesh database */
        Dpi *));			/* dpi - ptr to distributed processing info */
 
+EXTERN void initial_guess_stress_to_log_conf
+PROTO((double []                  // x - solution vector
+       int ));                    // Number of total nodes
+
 extern int coordinate_discontinuous_variables(Exo_DB *,	Dpi *);
 extern void determine_dvi_index(void);
 extern void reconcile_bc_to_matrl(void);

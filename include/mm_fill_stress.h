@@ -198,12 +198,12 @@ PROTO((dbl [DIM][DIM],              //s -stress
        dbl [DIM][DIM][DIM][DIM]));  //d_exp_s_ds - derivative of exp(s) wrt s
 
 void
-compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
-		   dbl exp_s[DIM][DIM],
-		   dbl d_exp_s_ds[DIM][DIM][DIM][DIM]);
+compute_d_exp_s_ds(dbl [DIM][DIM],                   //s - stress
+		   dbl [DIM][DIM],
+		   dbl [DIM][DIM][DIM][DIM]);
 
 void
-compute_exp_s(double s[DIM][DIM],
-	      double exp_s[DIM][DIM]);
+compute_exp_s(double [DIM][DIM],
+	      double [DIM][DIM]);
 
 #endif /* _MM_FILL_STRESS_H */
