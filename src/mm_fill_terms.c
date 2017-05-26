@@ -28052,7 +28052,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
     }
 
   // Load up DEVSS-G flag and Gs
-  if(pd->v[POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel==CONF_EVSS || vn->evssModel==LOG_CONF))
+  if(pd->v[POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel==LOG_CONF))
     {
       evss_f = 1;
     }
@@ -28076,13 +28076,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
     }
 
   // Turn on conformation tensor flag if desired
-  if(vn->evssModel==CONF    ||
-     vn->evssModel==CONF_G  ||
-     vn->evssModel==CONF_EVSS)
-    {
-      conf = CONF;
-    }
-  else if (vn->evssModel == LOG_CONF)
+  if (vn->evssModel == LOG_CONF)
     {
       conf = LOG_CONF;
     }
@@ -28092,15 +28086,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
     }
 
 
-  if (conf == CONF) {
-    for (mode=0; mode<vn->modes; mode++) {
-      for (a = 0; a < VIM; a++) {
-	for (b = 0; b < VIM; b++) {
-	  exp_s[mode][a][b] = fv->S[mode][a][b];
-	}
-      }
-    }
-  } else if (conf == LOG_CONF) {
+  if (conf == LOG_CONF) {
     for (mode = 0; mode < vn->modes; mode++) {
       //compute_exp_s(fv->S[mode], exp_s[mode]);
       log_conf_analytic_2D(fv->S[mode], exp_s[mode]);
@@ -28112,15 +28098,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
     {
       for(b=0; b<VIM; b++)
   	{
-  	  // For CONF_G we want to use the velocity gradient projection
-  	  if(vn->evssModel==CONF_G)
-  	    {
-  	      gamma[a][b] = fv->G[a][b] + fv->G[b][a];
-  	    }
-  	  else
-  	    {
-  	      gamma[a][b] = grad_v[a][b] + grad_v[b][a];
-  	    }
+  	  gamma[a][b] = grad_v[a][b] + grad_v[b][a];
   	}
     }
 
@@ -28369,15 +28347,8 @@ fluid_stress_conf( double Pi[DIM][DIM],
 		{
 		  for(j=0; j<ei->dof[var]; j++)
 		    {
-		      if(vn->evssModel==CONF_G)
-			{
-			  d_Pi->v[p][q][b][j] = 0.0;
-			}
-		      else
-			{
-			  d_Pi->v[p][q][b][j]  = mus*bf[var+q]->grad_phi_e[j][b][p][q];
-			  d_Pi->v[p][q][b][j] += mus*bf[var+p]->grad_phi_e[j][b][q][p];
-			}
+          	      d_Pi->v[p][q][b][j]  = mus*bf[var+q]->grad_phi_e[j][b][p][q];
+	              d_Pi->v[p][q][b][j] += mus*bf[var+p]->grad_phi_e[j][b][q][p];
 
 		      d_Pi->v[p][q][b][j] += d_mus->v[b][j]*gamma[p][q];
 		      d_Pi->v[p][q][b][j] -= d_tau_p_dv[p][q][b][j];
@@ -28442,16 +28413,8 @@ fluid_stress_conf( double Pi[DIM][DIM],
 		{
 		  for(j=0; j<ei->dof[var]; j++)
 		    {
-		      if(vn->evssModel==CONF_G)
-			{
-			  d_Pi->X[p][q][b][j] = 0.0;
-			}
-		      else
-			{
-			  d_Pi->X[p][q][b][j]  = mus*fv->d_grad_v_dmesh[p][q][b][j];
-			  d_Pi->X[p][q][b][j] += mus*fv->d_grad_v_dmesh[q][p][b][j];
-			}
-
+	  	      d_Pi->X[p][q][b][j]  = mus*fv->d_grad_v_dmesh[p][q][b][j];
+		      d_Pi->X[p][q][b][j] += mus*fv->d_grad_v_dmesh[q][p][b][j];
 		      d_Pi->X[p][q][b][j] += d_mus->X[b][j]*gamma[p][q];
 		      d_Pi->X[p][q][b][j] -= d_tau_p_dmesh[p][q][b][j];
 		      if(pd->v[POLYMER_STRESS11])
@@ -28518,11 +28481,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
                           var = v_s[mode][a][b];
                           for(j=0; j<ei->dof[var]; j++)
                             {
-		              if(conf == CONF)
-		                {
-		                  d_Pi->S[p][q][mode][a][b][j] = mup/lambda*delta(a,p)*delta(b,q)*bf[var]->phi[j];
-		                }
-                              else if(conf == LOG_CONF)
+                              if(conf == LOG_CONF)
                                 {
                                   d_Pi->S[p][q][mode][a][b][j] = mup/lambda*d_exp_s_ds[mode][p][q][a][b]*bf[var]->phi[j];
                                 }
@@ -28552,14 +28511,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 		      var = v_g[a][b];
                       for(j=0; j<ei->dof[var]; j++)
                         {
-			  if(vn->evssModel==CONF_G)
-			    {
-			      d_Pi->g[p][q][a][b][j] = mus*(delta(p,a)*delta(q,b)+delta(p,b)*delta(q,a))*bf[var]->phi[j];
-			    }
-			  else
-			    {
-			      d_Pi->g[p][q][a][b][j] = 0.0;
-			    }
+		          d_Pi->g[p][q][a][b][j] = 0.0;
 
 			  if(pd->v[POLYMER_STRESS11])
 			    {
