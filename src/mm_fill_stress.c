@@ -6064,6 +6064,7 @@ compute_exp_s(double s[DIM][DIM],
   int M = VIM;
   int N = VIM;
   int LDA = N;
+  int i,j,k;
 
   int INFO;
   int LWORK = 20;
@@ -6074,8 +6075,8 @@ compute_exp_s(double s[DIM][DIM],
   memset(A, 0.0, sizeof(double)*VIM*VIM);
 
   // convert to column major
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       A[i*VIM + j] = s[j][i];
     }
   }
@@ -6088,16 +6089,16 @@ compute_exp_s(double s[DIM][DIM],
   double U[VIM][VIM];
 
   // transpose (revert to row major)
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       U[i][j] = A[j*VIM + i];
     }
   }
 
   // exponentiate diagonal
   double D[VIM][VIM];
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       if (i == j) {
 	D[i][j] = exp(W[i]);
       } else {
@@ -6107,10 +6108,10 @@ compute_exp_s(double s[DIM][DIM],
   }
 
   /* matrix multiplication, the slow way */
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       double tmp = 0;
-      for (int k = 0; k < VIM; k++) {
+      for (k = 0; k < VIM; k++) {
 	tmp += U[i][k] * D[k][j];
       }
       exp_s[i][j] = tmp;
@@ -6118,18 +6119,18 @@ compute_exp_s(double s[DIM][DIM],
   }
   
   // multiply by transpose
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       double tmp = 0;
-      for (int k = 0; k < VIM; k++) {
+      for (k = 0; k < VIM; k++) {
 	tmp += exp_s[i][k] * U[j][k];
       }
       D[i][j] = tmp;
     }
   }
 
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       exp_s[i][j] = D[i][j];
     }
   }
@@ -6142,18 +6143,18 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 {
   double s_p[DIM][DIM];
   double exp_s_p[DIM][DIM];
-  int m,n;
+  int m,n,i,j,p,q;
  
   compute_exp_s(s, exp_s);
 
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
        s_p[i][j] = s[i][j];
  }
   }
 
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
       double ds = 1e-6;
 
       // perturb s
@@ -6166,8 +6167,8 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       compute_exp_s(s_p, exp_s_p);
 
       // approximate derivative
-      for (int p = 0; p < VIM; p++) {
-	for (int q = 0; q < VIM; q++) {
+      for (p = 0; p < VIM; p++) {
+	for (q = 0; q < VIM; q++) {
 	  d_exp_s_ds[p][q][i][j] = (exp_s_p[p][q] - exp_s[p][q]) / ds;
 	}
       }
