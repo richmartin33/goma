@@ -235,14 +235,14 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
       }
     }
 
-    // exponentiate diagonal
+    // Take log of diagonal
     double D[VIM][VIM];
     for (i = 0; i < VIM; i++) {
       for (j = 0; j < VIM; j++) {
 	if (i == j) {
 	  D[i][j] = log(W[i]);
 	} else {
-	  D[i][j] = 0;
+	  D[i][j] = 0.0;
 	}
       }
     }

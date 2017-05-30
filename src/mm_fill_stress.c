@@ -2551,7 +2551,9 @@ assemble_stress_log_conf(dbl tt,
   v_g[2][1] = VELOCITY_GRADIENT32; 
   v_g[2][2] = VELOCITY_GRADIENT33; 
 
-  
+  memset( exp_s, 0, sizeof(double)*DIM*DIM);
+  memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
+
   
   //Load up field variables
   for(a=0; a<dim; a++)
@@ -6228,9 +6230,6 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   // cosh(a1/2)
   a4 = (exp(a1div2) + exp(-a1div2)) / 2.0;
   
-  memset( exp_s, 0, sizeof(double)*DIM*DIM);
-  memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
-
   //Compute e^s
     exp_s[0][0] = a2 * (a4 + ((a-c)/a1)*a3);
     exp_s[0][1] = (a2/a1) * (2*b*a3);
