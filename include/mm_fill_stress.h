@@ -203,6 +203,10 @@ compute_d_exp_s_ds(dbl [DIM][DIM],                   //s - stress
 		   dbl [DIM][DIM][DIM][DIM]);
 
 void
+compute_d2_exp_s_ds2(dbl [DIM][DIM], 
+                   dbl [DIM][DIM][DIM][DIM][DIM][DIM]);
+
+void
 compute_exp_s(double [DIM][DIM],
 	      double [DIM][DIM]);
 

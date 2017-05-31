@@ -2474,6 +2474,7 @@ assemble_stress_log_conf(dbl tt,
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
   dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM];
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
+  dbl d2_exp_s_ds2[DIM][DIM][DIM][DIM][DIM][DIM];
   int use_G=0;
   dbl g[DIM][DIM];       
   dbl gt[DIM][DIM];        
@@ -2508,6 +2509,7 @@ assemble_stress_log_conf(dbl tt,
   dbl eps;      
   dbl Z=1.0;        
   dbl dZ_dtrace =0.0;
+  int sz;
 
   //Advective terms
   dbl v_dot_del_s[DIM][DIM];
@@ -2518,6 +2520,10 @@ assemble_stress_log_conf(dbl tt,
   dbl x_dot_del_exp_s[DIM][DIM];
   dbl d_xdotdelexps_dm;
   dbl d_vdotdelexps_dm;
+
+  dbl d2_exp_s_ds2_dot_grad_s[DIM][DIM][DIM][DIM][DIM];
+  dbl gt_dot_d_exp_s_ds[DIM][DIM][DIM][DIM];
+  dbl d_exp_s_ds_dot_g[DIM][DIM][DIM][DIM];
 
   //Trace of stress
   dbl trace=0.0; 
@@ -2555,7 +2561,8 @@ assemble_stress_log_conf(dbl tt,
 
   memset( exp_s, 0, sizeof(double)*DIM*DIM);
   memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
-
+  sz = sizeof(double)*DIM*DIM*DIM*DIM*DIM*DIM;
+  memset( d2_exp_s_ds2, 0, sz);
   
   //Load up field variables
   for(a=0; a<dim; a++)
@@ -2696,8 +2703,10 @@ assemble_stress_log_conf(dbl tt,
       //Use the analytic Jacobian for d/ds(e^s) in 2d (Kane et al. 2009)
       if(VIM==2)
 	{	  
-	  //Compute d/ds(e^s)
+	  //Compute d(e^s)/ds
 	  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+          // Compute d^2 (e^s)/ds^2
+          compute_d2_exp_s_ds2(s, d2_exp_s_ds2);
 	  //compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
 	  
 	}
@@ -2796,6 +2805,33 @@ assemble_stress_log_conf(dbl tt,
       	    }
       	}
 
+      for (a=0; a<VIM; a++)
+        {
+          for(b=0; b<VIM; b++)
+            {
+              for(i=0; i<VIM; i++)
+                {
+                  for(j=0; j<VIM; j++)
+                    {
+                      d_exp_s_ds_dot_g[a][b][i][j]=0.0;
+                      gt_dot_d_exp_s_ds[a][b][i][j]=0.0;
+                      for (k=0; k<VIM; k++)
+                        {
+                          d_exp_s_ds_dot_g[a][b][i][j] += d_exp_s_ds[a][k][i][j] * g[k][b];
+                          gt_dot_d_exp_s_ds[a][b][i][j] += gt[a][k] * d_exp_s_ds[k][b][i][j];
+                          d2_exp_s_ds2_dot_grad_s[k][a][b][i][j] = 0.0;
+                          for (r=0; r<VIM; r++)
+                            {
+                              for (w=0; w<VIM; w++)
+                                {
+                                  d2_exp_s_ds2_dot_grad_s[k][a][b][i][j] += d2_exp_s_ds2[a][b][i][j][r][w] * grad_s[k][r][w];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
       //Exponential term for PTT
       Z = exp(eps*(trace - (double) dim));
@@ -3200,8 +3236,14 @@ assemble_stress_log_conf(dbl tt,
       					    {
       					      if(pd->e[eqn] & T_MASS)
       						{
-      						  //Need second order terms d/ds^2{e^s}, for d/ds{d/dt(e^s)}
-      						  mass *= h3*det_J;
+      						  for(w=0; w<VIM; w++)
+                                                    {
+                                                      for(r=0; r<VIM; r++)
+                                                        {
+                                                          mass += d2_exp_s_ds2[a][b][p][q][w][r] * s_dot[w][r];
+                                                        }
+                                                    }
+      						  mass *= phi_j*h3*det_J;
       						  mass *= wt_func*at*wt*pd->etm[eqn][(LOG2_MASS)];
       						}
       					    }
@@ -3210,13 +3252,11 @@ assemble_stress_log_conf(dbl tt,
       					  if(pd->e[eqn] & T_ADVECTION)
       					    {
 					      
-      					      //Need second order terms d/ds^2{e^s}, for d/ds{u*grad(e^s)}
-					      
       					      for(k=0; k<VIM; k++)
       						{
-      						  advection -= g[a][k]*d_exp_s_ds[k][b][p][q] + d_exp_s_ds[a][k][p][q]*gt[k][b];
-      						}
-					    
+                                                  advection += v[k] * d2_exp_s_ds2_dot_grad_s[k][a][b][p][q];
+                                                }
+                                              advection -= gt_dot_d_exp_s_ds[a][b][p][q] + d_exp_s_ds_dot_g[a][b][p][q];
       					      advection *= h3*det_J*phi_j;
       					      advection *= wt_func*wt*at*pd->etm[eqn][(LOG2_ADVECTION)];
       					    }
@@ -3226,19 +3266,16 @@ assemble_stress_log_conf(dbl tt,
       					    {
 					      
       					      source_a = Z/lambda*d_exp_s_ds[a][b][p][q];
-      					      if(a==b)
-      						{
-      						  source_a -= Z/lambda;
-      						}
 					      
       					      if(alpha!=0.0)
       						{
-      						  source_b = exp_s_dot_exp_s[a][b] - 2.0*exp_s[a][b];
-      						  if(a==b)
-      						    {
-      						      source1 += 1.0;
-      						    }
-      						  source1 *= alpha/lambda;
+                                                  source_b = 0.0;
+                                                  for (k=0; k<VIM; k++)
+                                                    {
+                                                      source_b += d_exp_s_ds[a][k][p][q] * exp_s[k][b] + exp_s[a][k] * d_exp_s_ds[k][b][p][q];
+                                                    }
+                                                  source_b -= 2.0*d_exp_s_ds[a][b][p][q];
+      						  source_b *= alpha/lambda;
       						}
 
       					      source  = source_a + source_b;
@@ -6195,25 +6232,17 @@ compute_d2_exp_s_ds2(dbl s[DIM][DIM],                   //s - log-conformation t
 		   dbl d2_exp_s_ds2[DIM][DIM][DIM][DIM][DIM][DIM])
 {
   double s_p[DIM][DIM];
-  double s_p2[DIM][DIM];
-  double s_p3[DIM][DIM];
-  double s_p4[DIM][DIM];
   double exp_s[DIM][DIM];
-  double exp_s_p1[DIM][DIM];
-  double exp_s_p2[DIM][DIM];
-  double exp_s_p3[DIM][DIM];
-  double exp_s_p4[DIM][DIM];
-  int m,n,i,j,p,q,kk,ll;
-  double ds = 1E-6;
+  double d_exp_s_ds[DIM][DIM][DIM][DIM];
+  double d_exp_s_ds_p[DIM][DIM][DIM][DIM];
+  int m,n,i,j,p,q,k,l;
+  double ds = 1E-8;
  
-  compute_exp_s(s, exp_s);
+  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
 
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
        s_p[i][j] = s[i][j];
-       s_p2[i][j] = s[i][j];
-       s_p3[i][j] = s[i][j];
-       s_p4[i][j] = s[i][j];
  }
   }
 
@@ -6223,92 +6252,50 @@ compute_d2_exp_s_ds2(dbl s[DIM][DIM],                   //s - log-conformation t
         {
           if (i<=j)
             {
-              for (kk=0; kk<VIM; kk++)
+              s_p[i][j] += ds;
+              if(i != j)
                 {
-                  for (ll=0; ll<VIM; ll++)
+                  s_p[j][i] = s_p[i][j];
+                }
+              log_conf_analytic_2D_with_jac(s_p, exp_s, d_exp_s_ds_p);
+              for (k=0; k<VIM; k++)
+                {
+                  for (l=0; l<VIM; l++)
                     {
-                      if (kk<=ll)
+                      if (k <= l)
                         {
-                          if ((i==kk) && (j==ll))
+                          for (p=0; p<VIM; p++)
                             {
-                              s_p[i][j] += ds;
-                              s_p2[i][j] -= ds;
-                              if (i!=j)
+                              for (q=0; q<VIM; q++)
                                 {
-                                  s_p[j][i] = s_p[i][j];
-                                  s_p2[j][i] = s_p2[i][j];
-                                }
-                              // find exp_s at perturbed value
-                              compute_exp_s(s_p, exp_s_p1);
-                              compute_exp_s(s_p2, exp_s_p2);
-
-                              // approximate derivative
-                              for (p = 0; p < VIM; p++)
-                                {
-	                          for (q = 0; q < VIM; q++)
+                                  d2_exp_s_ds2[p][q][k][l][i][j] = (d_exp_s_ds_p[p][q][k][l] - d_exp_s_ds[p][q][k][l]) / ds;
+                                  if (k != l)
                                     {
-	                              d2_exp_s_ds2[p][q][i][j][i][j] = (exp_s_p1[p][q] - 2.*exp_s[p][q] + exp_s_p2[p][q]) / (ds*ds);
-	                            }
-                                }
-                             }
-                           else
-                             {
-                               s_p[i][j] += ds;
-                               s_p[kk][ll] += ds;
-                               s_p2[i][j] += ds;
-                               s_p2[kk][ll] -= ds;
-                               s_p3[i][j] -= ds;
-                               s_p3[kk][ll] += ds;
-                               s_p4[i][j] -= ds;
-                               s_p4[kk][ll] -= ds;
-                               if (i=!j)
-                                 {
-                                   s_p[j][i] = s_p[i][j]
-                                   s_p2[j][i] = s_p2[i][j]
-                                   s_p3[j][i] = s_p3[i][j]
-                                   s_p4[j][i] = s_p4[i][j]
-                                 }
-
-                               if (kk=!ll)
-                                 {
-                                   s_p[ll][kk] = s_p[kk][ll]
-                                   s_p2[ll][kk] = s_p2[kk][ll]
-                                   s_p3[ll][kk] = s_p3[kk][ll]
-                                   s_p4[ll][kk] = s_p4[kk][ll]
-                                 }
-                               compute_exp_s(s_p, exp_s_p1);
-                               compute_exp_s(s_p2, exp_s_p2);
-                               compute_exp_s(s_p3, exp_s_p3);
-                               compute_exp_s(s_p4, exp_s_p4);
-                              // approximate derivative
-                              for (p = 0; p < VIM; p++)
-                                {
-	                          for (q = 0; q < VIM; q++)
+                                      d2_exp_s_ds2[p][q][l][k][i][j] = d2_exp_s_ds2[p][q][k][l][i][j];
+                                    }
+                                  if (i != j)
                                     {
-	                              d2_exp_s_ds2[p][q][i][j][kk][ll] = (exp_s_p1[p][q]-exp_s_p2[p][q]-exp_s_p3[p][q]
-                                                                          +exp_s_p4[p][q])/(4.0*ds*ds);
-	                            }
+                                      d2_exp_s_ds2[p][q][k][l][j][i] = d2_exp_s_ds2[p][q][k][l][i][j];
+                                      d2_exp_s_ds2[p][q][l][k][j][i] = d2_exp_s_ds2[p][q][k][l][i][j];
+                                    }
                                 }
-                             }
+                            }
+                        } // if k<=l
+                    } // for l
+                }  // for k
       
-                           for (m = 0; m < VIM; m++) {
-                             for (n=0; n < VIM; n++) {
-                               s_p[m][n] = s[m][n];
-                               s_p2[m][n] = s[m][n];
-                               s_p3[m][n] = s[m][n];
-                               s_p4[m][n] = s[m][n];
-                             }
-                           }
-                           d2_exp_s_ds2[p][q][i][j][ll][kk] = d2_exp_s_ds2[p][q][i][j][kk][ll];
-                           d2_exp_s_ds2[p][q][j][i][kk][ll] = d2_exp_s_ds2[p][q][i][j][kk][ll];
-                           d2_exp_s_ds2[p][q][j][i][ll][kk] = d2_exp_s_ds2[p][q][i][j][kk][ll];
-                         } // if kk <= ll
-                     } // for ll
-                 } // for kk
-             } // if i<=j
-         } // for j
-     } // for i
+              for (m = 0; m < VIM; m++)
+                {
+                  for (n=0; n < VIM; n++)
+                    {
+                      s_p[m][n] = s[m][n];
+                    }
+                }
+            } // if i <= j
+        } // for j
+    } // for i
 }
+
 
 void
 log_conf_analytic_2D(dbl s[DIM][DIM],                   //s - stress
