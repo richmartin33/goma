@@ -259,6 +259,7 @@ int PP_LAME_MU = -1;
 int PP_LAME_LAMBDA = -1;
 int VON_MISES_STRESS = -1;
 int VON_MISES_STRAIN = -1;
+int CONF_MAP = -1;
 int UNTRACKED_SPEC = -1;
 
 int len_u_post_proc = 0;	/* size of dynamically allocated u_post_proc
@@ -2240,6 +2241,48 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     local_post[VON_MISES_STRESS] = INV;
     local_lumped[VON_MISES_STRESS] = 1.;
   }
+
+  if (CONF_MAP != -1 && pd->v[POLYMER_STRESS11] && vn->evssModel == CONF_EVSS) {
+    index = 0;
+    double lambda;
+    VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+    VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+    d_mup = NULL; 
+    for (mode = 0; mode < vn->modes; mode++) {
+      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      // Polymer time constant
+      lambda = 0.0;
+      if(ve[mode]->time_constModel == CONSTANT)
+        {
+          lambda = ve[mode]->time_const;
+        }      
+      if(lambda==0.0)
+        {
+          EH( -1, "The conformation tensor needs a non-zero polymer time constant.");
+        }
+      if(mup==0.0)
+        {
+          EH( -1, "The conformation tensor needs a non-zero polymer viscosity.");
+        }
+      
+      if (pd->v[v_s[mode][0][0]]) {      
+        for (a = 0; a < VIM; a++) {
+          for (b = 0; b < VIM; b++) {
+            /* since the stress tensor is symmetric,
+               only assemble the upper half */ 
+            if (a <= b) {  
+              if (pd->v[v_s[mode][a][b]]) {
+                local_post[CONF_MAP + index] = (mup/lambda)*(fv->S[mode][a][b] - (double)delta(a,b));
+                local_lumped[CONF_MAP + index] = 1.; 
+                index++;
+              }
+            }
+          } // for b
+        } // for a
+      }     
+    } // for mode
+  } // if (CONF_MAP)
+
 
   if (USER_POST != -1) {
       /* calculate a user-specified post-processing variable */
@@ -6286,6 +6329,7 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "Error ZZ heat flux", &ERROR_ZZ_Q);
   iread = look_for_post_proc(ifp, "Error ZZ pressure", &ERROR_ZZ_P);
   iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
+  iread = look_for_post_proc(ifp, "Conf Stress", &CONF_MAP);
 
   /*
    * Initialize for surety before communication to other processors.
@@ -8927,6 +8971,32 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
       SHELL_NORMALS = -1;
     }
    
+    if (CONF_MAP != -1 && Num_Var_In_Type[POLYMER_STRESS11])
+    {
+      CONF_MAP = index_post;
+      set_nv_tkud(rd, index, 0, 0, -2, "MS11","[1]",
+                  "conf stress xx", FALSE);
+      index++;
+      index_post++;
+      set_nv_tkud(rd, index, 0, 0, -2, "MS12","[1]",
+                  "conf stress xy", FALSE);
+
+      index++;
+      index_post++;
+      set_nv_tkud(rd, index, 0, 0, -2, "MS22","[1]",
+                  "conf stress yy", FALSE);
+      index++;
+      index_post++;
+      if (Num_Dim > 2)
+        {
+          EH(-1, "Conf Stress not implemented for 3D");
+        }
+    }
+  else  
+    {
+      CONF_MAP = -1; 
+    }
+
   /*
    * Porous flow post-processing setup section
    */

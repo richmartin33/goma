@@ -2458,6 +2458,7 @@ assemble_stress_conf(dbl tt,
   dbl mass_a, mass_b;
   dbl advection;	
   dbl advection_a, advection_b, advection_c, advection_d;
+  dbl diffusion;
   dbl source;
   dbl source1;
   dbl source_a=0, source_b=0;
@@ -2477,7 +2478,7 @@ assemble_stress_conf(dbl tt,
   int use_G=0;
   dbl g[DIM][DIM];       
   dbl gt[DIM][DIM];        
-
+  dbl h_diffusion;
 
   //Tensors for dot products
   dbl s_dot_s[DIM][DIM]; 
@@ -2777,6 +2778,19 @@ assemble_stress_conf(dbl tt,
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
 
+			  
+			  diffusion = 0.;
+                          h_diffusion = 7.5E-5;
+			  if ( pd->e[eqn] & T_DIFFUSION )
+			    {
+                              for (p=0; p<dim; p++)
+                                {
+                                  diffusion += bf[eqn]->grad_phi[i][p]*grad_s[p][a][b];
+                                }
+                              diffusion *= - det_J * wt * h3;
+			      diffusion *= h_diffusion*pd->etm[eqn][(LOG2_DIFFUSION)];
+			    }
+			  
 			  source = 0.0;
 			  if(pd->e[eqn] & T_SOURCE)
 			    {
@@ -2801,7 +2815,7 @@ assemble_stress_conf(dbl tt,
 			      source *= pd->etm[eqn][(LOG2_SOURCE)];
 			    }
 			  
-			  lec->R[upd->ep[eqn]][i] += mass + advection + source;
+			  lec->R[upd->ep[eqn]][i] += mass + advection + diffusion + source;
 			  
 			}//i loop
 		    }//if a<=b
