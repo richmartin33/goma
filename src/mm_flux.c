@@ -697,28 +697,41 @@ evaluate_flux(
   			memset( ves, 0, sizeof(dbl)*DIM*DIM);
   			if ( pd->v[POLYMER_STRESS11] )
     			  {
+                            dbl log_c[DIM][DIM];
+                            dbl exp_s[DIM][DIM];
 			    for ( a=0; a<VIM; a++)
         	              {
 			        for ( b=0; b<VIM; b++)
             			   {
 			             for ( ve_mode=0; ve_mode<vn->modes; ve_mode++)
                 		       {
+				         // Polymer viscosity
+				         dbl mup = 0.0;
+				         mup = viscosity(ve[ve_mode]->gn, gamma, NULL);
+				         // Polymer time constant
+				         dbl lambda = 0.0;
+				         if(ve[ve_mode]->time_constModel == CONSTANT)
+				           {
+					     lambda = ve[ve_mode]->time_const;
+				           }
 					 if(vn->evssModel==CONF    ||
 					    vn->evssModel==CONF_G  ||
 					    vn->evssModel==CONF_EVSS)
 					   {
-					     // Polymer viscosity
-					     dbl mup = 0.0;
-					     mup = viscosity(ve[ve_mode]->gn, gamma, NULL);
-					     // Polymer time constant
-					     dbl lambda = 0.0;
-					     if(ve[ve_mode]->time_constModel == CONSTANT)
-					       {
-						 lambda = ve[ve_mode]->time_const;
-					       }
 					     ves[a][b] += mup/lambda*(fv->S[ve_mode][a][b]-(double)delta(a,b));
-
 					   }
+                                         else if(vn->evssModel==LOG_CONF)
+                                           {
+                                             for (i=0; i<VIM; i++)
+                                               {
+                                                 for (j=0; j<VIM; j++)
+                                                   {
+                                                     log_c[i][j] = fv->S[ve_mode][i][j];
+                                                   }     
+                                               }
+                                             compute_exp_s(log_c, exp_s);
+                                             ves[a][b] += mup/lambda*(exp_s[a][b]-(double)delta(a,b));
+                                           }
 					 else
 					   {
 					     ves[a][b] += fv->S[ve_mode][a][b];
