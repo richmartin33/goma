@@ -2523,6 +2523,7 @@ assemble_stress_log_conf(dbl tt,
   //SUPG terms
   dbl h_elem=0, h_elem_inv=0, h_elem_deriv=0;
   dbl supg=0;
+  dbl term1=0.0;
 
   status = 0;
   eqn   = R_STRESS11;			
@@ -2693,11 +2694,16 @@ assemble_stress_log_conf(dbl tt,
 
       //Use the analytic Jacobian for d/ds(e^s) in 2d (Kane et al. 2009)
       if(VIM==2)
-	{	  
-	  //Compute d/ds(e^s)
-	  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
-	  //compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
-	  
+	{
+          term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+          if (term1 < 1.E-5)
+            {
+              compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
+            }
+          else
+           {
+             log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+           }
 	}
       //Use finite difference Jacobian for d/ds(e^2) in cylindrical and 3d
       else

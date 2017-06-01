@@ -2767,7 +2767,14 @@ assemble_momentum(dbl time,       /* current time */
   /*
    * Calculate the momentum stress tensor at the current gauss point
    */
-  fluid_stress( Pi, d_Pi );
+  if(vn->evssModel==LOG_CONF)
+    {
+      fluid_stress_conf(Pi, d_Pi);
+    }
+  else
+    {
+      fluid_stress( Pi, d_Pi );
+    }
 
   (void) momentum_source_term(f, df, time);
 
@@ -27995,6 +28002,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
   dbl mu_num;
   dbl d_mun_dS[MAX_MODES][DIM][DIM][MDE];
   dbl d_mun_dG[DIM][DIM][MDE];
+  dbl term1=0.0;
 
   // Dilational viscosity
   dbl kappa = 0.0;
@@ -28148,8 +28156,15 @@ fluid_stress_conf( double Pi[DIM][DIM],
 
   if (conf == LOG_CONF) {
     for (mode = 0; mode < vn->modes; mode++) {
-      //compute_exp_s(fv->S[mode], exp_s[mode]);
-      log_conf_analytic_2D(fv->S[mode], exp_s[mode]);
+      term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+      if (term1 < 1.E-5)
+        {
+          compute_exp_s(fv->S[mode], exp_s[mode]);
+        }
+      else
+       {
+         log_conf_analytic_2D(fv->S[mode], exp_s[mode]);
+       }
     }
   }
 
@@ -28513,9 +28528,17 @@ fluid_stress_conf( double Pi[DIM][DIM],
   // Calculate d_exp_s_ds for LOG_CONF case
   for (mode = 0; mode < vn->modes; mode++)
     {
-      log_conf_analytic_2D_with_jac(fv->S[mode], exp_s[mode],
-                                    d_exp_s_ds[mode]); 
-    }
+      term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+      if (term1 < 1.E-5)
+        {
+          compute_d_exp_s_ds(fv->S[mode], exp_s[mode], d_exp_s_ds[mode]);
+        }
+      else
+       {
+         log_conf_analytic_2D_with_jac(fv->S[mode], exp_s[mode], d_exp_s_ds[mode]);
+       }
+   }
+
                 
   // POLYMER_STRESS
   if(d_Pi!=NULL && pd->v[var])

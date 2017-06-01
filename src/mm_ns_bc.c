@@ -6899,6 +6899,8 @@ stress_no_v_dot_gradS(double func[MAX_MODES][6],
   dbl d_at_dT[MDE];
   dbl wlf_denom;
 
+  dbl term1=0.;
+
   /* constitutive equation parameters */
   dbl alpha;     /* This is the Geisekus mobility parameter */
   dbl lambda=0;    /* polymer relaxation constant */
@@ -7060,7 +7062,15 @@ stress_no_v_dot_gradS(double func[MAX_MODES][6],
       //Use analytic exp_s and d_exp_s_ds in 2D (Kane et al. 2009)
       if(VIM==2)
         {
-          log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+          term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+          if (term1 < 1.E-5)
+            {
+              compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
+            }
+          else
+           {
+             log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+           }
         }
       else
         {
