@@ -230,19 +230,19 @@ initial_guess_stress_to_conf(double *x, int num_total_nodes)
     x[s_idx[1]] = s[0][1];
     x[s_idx[2]] = s[1][1];
 
-    printf("Node %d:\n", node);
+  //  printf("Node %d:\n", node);
 
-    printf("C = [\n");
-    printf("]\n");
+  //  printf("C = [\n");
+  //  printf("]\n");
 
-    printf("C = [\n");
-    for (i = 0; i < 2; i++) {
-      for (j = 0; j < 2; j++) {
-	printf("%g ", s[i][j]);
-      }
-      printf("\n");
-    }
-    printf("]\n");
+  //  printf("C = [\n");
+  //  for (i = 0; i < 2; i++) {
+  //    for (j = 0; j < 2; j++) {
+  //      printf("%g ", s[i][j]);
+  //    }
+  //    printf("\n");
+  //  }
+  //  printf("]\n");
     
   }
 }
@@ -873,7 +873,10 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	}
     }
 
-  initial_guess_stress_to_conf(x, num_total_nodes);
+  if(Conformation_Flag == 1)
+    {
+      initial_guess_stress_to_conf(x, num_total_nodes);
+    }
 
   /* Load external fields from import vectors xnv_in & xev_in */
 #ifdef LIBRARY_MODE
