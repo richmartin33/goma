@@ -1018,9 +1018,10 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	}
     }
 
-
-  //  initial_guess_conf_to_log_conf(x, num_total_nodes);
-  //initial_guess_stress_to_log_conf(x, num_total_nodes);
+  if(Conformation_Flag == 1)
+    {
+      initial_guess_stress_to_log_conf(x, num_total_nodes);
+    }
   
   /* Load external fields from import vectors xnv_in & xev_in */
 #ifdef LIBRARY_MODE
