@@ -4078,7 +4078,7 @@ assemble_momentum(dbl time,       /* current time */
 					{
 					  for ( q=0; q<VIM; q++)
 					    {
-					      diffusion +=
+					      diffusion -=
 						grad_phi_i_e_a[p][q] * d_Pi->g[q][p][b][c][j];
 					    }
 					}
@@ -28475,6 +28475,10 @@ fluid_stress_fenep( double Pi[DIM][DIM],
 			      if(fenep)
 				{
 				  d_Pi->S[p][q][mode][a][b][j] = mup/lambda*f_fenep*delta(a,p)*delta(b,q)*bf[var]->phi[j];
+				  if(p==q)
+				    {
+				      d_Pi->S[p][q][mode][a][b][j] += mup*bf[var]->phi[j]/lambda*fv->S[mode][a][b]*b_fenep/(pow(b_fenep - trace[mode],2));
+                                    }
 				}
 			      else
 				{

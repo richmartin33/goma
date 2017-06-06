@@ -3330,6 +3330,10 @@ assemble_stress_fenep(dbl tt,	/* parameter to vary time integration from
 					  if ( pd->e[eqn] & T_SOURCE )
 					    {
 					      source  =  phi_j * f_fenep * (double)delta(a,p) * (double)delta(b,q) / lambda;
+				              if(p==q)
+                                                {
+                                                  source += phi_j * s[a][b] * b_fenep / (pow(b_fenep - s[0][0] - s[1][1], 2)*lambda);
+                                                } 
 					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
 					      
 					    }
