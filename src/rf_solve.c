@@ -121,21 +121,23 @@ PROTO(( int,
 
 // C = A X B
 void slow_square_dgemm(int transpose_b, int N, double A[N][N], double B[N][N], double C[N][N]) {
+  int i,j,k;
+  double tmp;
   if (transpose_b) {
-    for (int i = 0; i < N; i++) {
-      for (int j = 0; j < N; j++) {
-	double tmp = 0;
-	for (int k = 0; k < N; k++) {
+    for (i = 0; i < N; i++) {
+      for (j = 0; j < N; j++) {
+	tmp = 0;
+	for (k = 0; k < N; k++) {
 	  tmp += A[i][k] * B[j][k];
 	}
 	C[i][j] = tmp;
       }
     }
   } else {
-    for (int i = 0; i < N; i++) {
-      for (int j = 0; j < N; j++) {
-	double tmp = 0;
-	for (int k = 0; k < N; k++) {
+    for (i = 0; i < N; i++) {
+      for (j = 0; j < N; j++) {
+	tmp = 0;
+	for (k = 0; k < N; k++) {
 	  tmp += A[i][k] * B[k][j];
 	}
 	C[i][j] = tmp;
@@ -148,7 +150,7 @@ void
 initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
 {
   // assume there is only 1 mode atm
-  int idx;
+  int idx,v,i,j;
 
   double s[VIM][VIM];
   double log_s[VIM][VIM];
@@ -169,7 +171,7 @@ initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
     memset(A, 0.0, sizeof(double)*VIM*VIM);
 
     int idx = 0;
-    for (int v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
+    for (v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
       s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
       idx++;
     }
@@ -184,8 +186,8 @@ initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
     s[1][1] = x[s_idx[2]];
     
     // convert to column major
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	A[i*VIM + j] = s[j][i];
       }
     }
@@ -198,16 +200,16 @@ initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
     double U[VIM][VIM];
 
     // transpose (revert to row major)
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	U[i][j] = A[j*VIM + i];
       }
     }
 
     // exponentiate diagonal
     double D[VIM][VIM];
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	if (i == j) {
 	  D[i][j] = log(W[i]);
 	} else {
@@ -222,8 +224,8 @@ initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
     // multiply by transpose
     slow_square_dgemm(1, VIM, log_s, U, D);
 
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	log_s[i][j] = D[i][j];
       }
     }
@@ -235,8 +237,8 @@ initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
     printf("Node %d:\n", node);
 
     printf("C = [\n");
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 2; j++) {
+    for (i = 0; i < 2; i++) {
+      for (j = 0; j < 2; j++) {
 	printf("%g ", s[i][j]);
       }
       printf("\n");
@@ -244,8 +246,8 @@ initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
     printf("]\n");
 
     printf("log(C) = [\n");
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 2; j++) {
+    for (i = 0; i < 2; i++) {
+      for (j = 0; j < 2; j++) {
 	printf("%g ", log_s[i][j]);
       }
       printf("\n");
@@ -259,7 +261,7 @@ void
 initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
 {
   // assume there is only 1 mode atm
-  int idx;
+  int idx,node,v,i,j;
 
   double s[VIM][VIM];
   double log_s[VIM][VIM];
@@ -284,12 +286,12 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
 
   ve[mode]  = ve_glob[0][mode];
   
-  for (int node = 0; node < num_total_nodes; node++) {
+  for (node = 0; node < num_total_nodes; node++) {
     memset(WORK, 0, sizeof(double)*LWORK);
     memset(A, 0.0, sizeof(double)*VIM*VIM);
 
     int idx = 0;
-    for (int v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
+    for (v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
       s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
       idx++;
     }
@@ -315,15 +317,15 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
     s[1][1] = x[s_idx[2]];
 
     // Convert stress to c
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	s[i][j] = (lambda/mup) * s[i][j] + delta(i,j);
       }
     }
     
     // convert to column major
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	A[i*VIM + j] = s[j][i];
       }
     }
@@ -336,16 +338,16 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
     double U[VIM][VIM];
 
     // transpose (revert to row major)
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	U[i][j] = A[j*VIM + i];
       }
     }
 
     // exponentiate diagonal
     double D[VIM][VIM];
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	if (i == j) {
 	  D[i][j] = log(W[i]);
 	} else {
@@ -360,8 +362,8 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
     // multiply by transpose
     slow_square_dgemm(1, VIM, log_s, U, D);
 
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
 	log_s[i][j] = D[i][j];
       }
     }
@@ -1020,7 +1022,7 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 
 
   //  initial_guess_conf_to_log_conf(x, num_total_nodes);
-  //initial_guess_stress_to_log_conf(x, num_total_nodes);
+  initial_guess_stress_to_log_conf(x, num_total_nodes);
   
   /* Load external fields from import vectors xnv_in & xev_in */
 #ifdef LIBRARY_MODE

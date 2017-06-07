@@ -2252,7 +2252,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
 	       only assemble the upper half */ 
 	    if (a <= b) { 
 	      if (pd->v[v_s[mode][a][b]]) {
-		local_post[LOG_CONF_MAP + index] = (mup/lambda)*(exp_s[a][b] - delta(a,b));
+		local_post[LOG_CONF_MAP + index] = (mup/lambda)*(exp_s[a][b] - (double)delta(a,b));
 		local_lumped[LOG_CONF_MAP + index] = 1.;
 		index++;
 	      }
