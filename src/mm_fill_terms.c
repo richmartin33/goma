@@ -28035,6 +28035,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
   dbl s[DIM][DIM];                      // Polymer stress tensor
   dbl gamma_cont[DIM][DIM];             // Shear rate tensor based on continuous gradient of velocity
   dbl P;
+  dbl s11,s12,s22;
 
   // Flag to use a Fortin DEVSS-G stress formulation
   int evss_f;
@@ -28156,7 +28157,10 @@ fluid_stress_conf( double Pi[DIM][DIM],
 
   if (conf == LOG_CONF) {
     for (mode = 0; mode < vn->modes; mode++) {
-      term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+      s11 = fv->S[mode][0][0];
+      s12 = fv->S[mode][0][1];
+      s22 = fv->S[mode][1][1];
+      term1 = sqrt(pow(s22-s11,2.0) + 4.*s12*s12);
       if (term1 < 1.E-5)
         {
           compute_exp_s(fv->S[mode], exp_s[mode]);
@@ -28528,7 +28532,10 @@ fluid_stress_conf( double Pi[DIM][DIM],
   // Calculate d_exp_s_ds for LOG_CONF case
   for (mode = 0; mode < vn->modes; mode++)
     {
-      term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+      s11 = fv->S[mode][0][0];
+      s12 = fv->S[mode][0][1];
+      s22 = fv->S[mode][1][1];
+      term1 = sqrt(pow(s22-s11,2.0) + 4.*s12*s12);
       if (term1 < 1.E-5)
         {
           compute_d_exp_s_ds(fv->S[mode], exp_s[mode], d_exp_s_ds[mode]);

@@ -2488,6 +2488,8 @@ assemble_stress_log_conf(dbl tt,
   dbl exp_s_dot_exp_s[DIM][DIM]; 
   dbl exp_s_dot_g[DIM][DIM];
   dbl gt_dot_exp_s[DIM][DIM];
+  dbl g_dot_exp_s[DIM][DIM];
+  dbl exp_s_dot_gt[DIM][DIM];
 
   //Polymer viscosity
   dbl mup;
@@ -2688,9 +2690,6 @@ assemble_stress_log_conf(dbl tt,
 	{
 	  lambda = mup/ve[mode]->time_const;
 	}
-      //PTT exponent
-      eps  = ve[mode]->eps;
-
 
       //Use the analytic Jacobian for d/ds(e^s) in 2d (Kane et al. 2009)
       if(VIM==2)
@@ -2800,15 +2799,23 @@ assemble_stress_log_conf(dbl tt,
       	    }
       	}
 
+      //PTT exponent
+      eps  = ve[mode]->eps;
 
       //Exponential term for PTT
-      Z = exp(eps*(trace - (double) dim));
+      Z = exp(eps*(trace - (double) dim)); dZ_dtrace = eps * Z;
 
       //Compute some tensor dot products
       
       (void) tensor_dot(exp_s, g, exp_s_dot_g, VIM);
       (void) tensor_dot(gt, exp_s, gt_dot_exp_s, VIM);
       (void) tensor_dot(exp_s, exp_s, exp_s_dot_exp_s, VIM);
+      if( lcwt != 0.)
+        {
+          (void) tensor_dot(exp_s, gt, exp_s_dot_gt, VIM);
+          (void) tensor_dot(g, exp_s, g_dot_exp_s, VIM);
+        }
+
 
       //If you need more terms, this would be a good place to compute before entering the residual assembly
 
@@ -2851,34 +2858,36 @@ assemble_stress_log_conf(dbl tt,
 			  if(pd->e[eqn] & T_ADVECTION)
  			    {  
 			      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b];
-			      advection -= gt_dot_exp_s[a][b] + exp_s_dot_g[a][b];			      
+                              if( ucwt != 0.) advection -= ucwt*(gt_dot_exp_s[a][b] + exp_s_dot_g[a][b]);
+                              if( lcwt != 0.) advection += lcwt*(g_dot_exp_s[a][b] + exp_s_dot_gt[a][b]); 
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
 
-			  source = 0.0;
-			  if(pd->e[eqn] & T_SOURCE)
-			    {
-			      source +=  exp_s[a][b]/lambda;
-			      if(a==b)
-				{
-				  source -= 1/lambda;
-				}
+                          source = 0.0; 
+                          if(pd->e[eqn] & T_SOURCE)
+                            {
+                              source +=  Z*exp_s[a][b]/lambda;
+                              if(a==b)
+                                {
+                                  source -= Z/lambda;
+                                }
 
-			      if(alpha!=0.0)
-				{
-				  source1 = exp_s_dot_exp_s[a][b] - 2.0*exp_s[a][b];
-				  if(a==b)
-				    {
-				      source1 += 1.0;
-				    }
-				  source1 *= alpha/lambda;
-				  source += source1;
-				}
-			      source *= wt_func*det_J*h3*wt;			      
-			      source *= pd->etm[eqn][(LOG2_SOURCE)];
-			    }
-			  lec->R[upd->ep[eqn]][i] += mass + advection + source;
+                              if(alpha!=0.0)
+                                {
+                                  source1 = exp_s_dot_exp_s[a][b] - 2.0*exp_s[a][b];
+                                  if(a==b)
+                                    {
+                                      source1 += 1.0; 
+                                    }
+                                  source1 *= alpha/lambda;
+                                  source += source1;
+                                }
+                              source *= wt_func*det_J*h3*wt;     
+                              source *= pd->etm[eqn][(LOG2_SOURCE)];
+                            }
+                          lec->R[upd->ep[eqn]][i] += mass + advection + source;
+
 			}//i loop
 		    }//if a<=b
 		}// b loop
