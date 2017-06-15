@@ -263,8 +263,6 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
        * Perturb one variable at a time
        */
 
-      if (idv[j][0] == PRESSURE) continue;
-
       //      sprintf(errstring, "Computing J[:,%d] with respect to %s\n", j, Var_Name[idv[j][0]].name1);
       //      printf(errstring);
        

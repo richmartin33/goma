@@ -6161,6 +6161,10 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
   double s_p[DIM][DIM];
   double exp_s_p[DIM][DIM];
   int m,n,i,j,p,q;
+
+  memset(exp_s_p,    0, sizeof(double)*DIM*DIM);
+  memset(exp_s,      0, sizeof(double)*DIM*DIM);
+  memset(d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
  
   compute_exp_s(s, exp_s);
 
@@ -6240,6 +6244,10 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   a1 = sqrt(pow(c-a, 2) + 4*b*b);
   a2 = exp((a+c) / 2.0);
   double a1div2 = a1 / 2.0;
+
+  memset( exp_s, 0, sizeof(double)*DIM*DIM);
+  memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
+
   // sinh(a1/2)
   a3 = (exp(a1div2) - exp(-a1div2)) / 2.0;
   // cosh(a1/2)
