@@ -2694,15 +2694,15 @@ assemble_stress_log_conf(dbl tt,
       //Use the analytic Jacobian for d/ds(e^s) in 2d (Kane et al. 2009)
       if(VIM==2)
 	{
-          term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
-          if (term1 < 1.E-5)
-            {
+          //term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
+          //if (term1 < 1.E-5)
+            //{
               compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
-            }
-          else
-           {
-             log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
-           }
+            //}
+          //else
+           //{
+           //  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+           //}
 	}
       //Use finite difference Jacobian for d/ds(e^2) in cylindrical and 3d
       else
@@ -2804,6 +2804,9 @@ assemble_stress_log_conf(dbl tt,
 
       //Exponential term for PTT
       Z = exp(eps*(trace - (double) dim)); dZ_dtrace = eps * Z;
+
+      ucwt = 1.0 - ve[mode]->xi / 2.0;
+      lcwt = ve[mode]->xi / 2.0;
 
       //Compute some tensor dot products
       
