@@ -4055,7 +4055,7 @@ assemble_momentum(dbl time,       /* current time */
 	       * J_m_G
 	       */
 		  
-	      if ( pdv[POLYMER_STRESS11] && (vn->evssModel == EVSS_F) )
+	      if ( pdv[POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel==LOG_CONF) )
 		{
 		  for ( b=0; b<VIM; b++)
 		    {
@@ -28615,7 +28615,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 				      // Polymer viscosity
 				      mup = viscosity(ve[mode]->gn, gamma, d_mup);
 				      
-				      d_Pi->g[p][q][a][b][j] -= mup*(delta(p,a)*delta(q,b)+delta(p,b)*delta(q,a))*bf[var]->phi[j];
+				      d_Pi->g[p][q][a][b][j] += mup*(delta(p,a)*delta(q,b)+delta(p,b)*delta(q,a))*bf[var]->phi[j];
 				    }
 				}			  
 			    }
