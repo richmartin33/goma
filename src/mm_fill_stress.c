@@ -2862,7 +2862,11 @@ assemble_stress_log_conf(dbl tt,
  			    {  
 			      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b];
                               if( ucwt != 0.) advection -= ucwt*(gt_dot_exp_s[a][b] + exp_s_dot_g[a][b]);
-                              if( lcwt != 0.) advection += lcwt*(g_dot_exp_s[a][b] + exp_s_dot_gt[a][b]); 
+                              if( lcwt != 0.)
+                                {
+                                  advection += lcwt*(g_dot_exp_s[a][b] + exp_s_dot_gt[a][b]);
+                                  advection += (g[a][b] + gt[a][b]) * (ucwt - lcwt - 1.0);
+                                }
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }

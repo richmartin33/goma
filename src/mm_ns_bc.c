@@ -7662,7 +7662,11 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                  if (lambda != 0.)
                    {
                     if( ucwt != 0.) advection -= ucwt*(gt_dot_exp_s[a][b] + exp_s_dot_g[a][b]);
-                    if( lcwt != 0.) advection += lcwt*(exp_s_dot_gt[a][b] + g_dot_exp_s[a][b]);
+                    if( lcwt != 0.)
+                      {
+                        advection += lcwt*(exp_s_dot_gt[a][b] + g_dot_exp_s[a][b]);
+                        advection += (g[a][b] + gt[a][b]) * (ucwt - lcwt - 1.0);
+                      }
                     advection *= at * pd->etm[eqn][(LOG2_ADVECTION)];
                    }
 
@@ -7671,7 +7675,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                  source +=  Z * exp_s[a][b] / lambda;
                  if(a==b)
                    {
-                     source -= 1.0/lambda;
+                     source -= Z/lambda;
                    }
 
                  if (alpha != 0.)
@@ -7864,6 +7868,8 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                     {
                                      advection -=  ucwt * phi_j * (exp_s[p][b] * (double)delta(a,q) + exp_s[a][p] * (double)delta(b,q));
                                      advection +=  lcwt * phi_j * (exp_s[a][q] * (double)delta(p,b) + exp_s[q][b] * (double)delta(a,p));
+                                     if( lcwt != 0.) advection += ((double)delta(a,p)*(double)delta(b,q) + (double)delta(b,p)*(double)delta(a,q))
+                                                                     * ( ucwt - lcwt - 1.0);
                                      advection *=  at;
                                     }
                                   advection *= pd->etm[eqn][(LOG2_ADVECTION)];
