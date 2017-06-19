@@ -184,4 +184,8 @@ PROTO((dbl [DIM][DIM],		/* s - total stress */
        dbl [MAX_MODES][DIM][DIM][MDE], /* d_mun_dS - derivative of mun wrt S*/ 
        dbl [DIM][DIM][MDE]));	/* d_mun_dG - derivative of mun wrt G */
 
+EXTERN void positive_definite_check
+PROTO(( dbl [DIM][DIM],  // conformation tensor
+        int *));         // positive_definite (true = 1, false = 0)
+
 #endif /* _MM_FILL_STRESS_H */

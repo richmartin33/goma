@@ -2442,6 +2442,7 @@ assemble_stress_conf(dbl tt,
   int dim, p, q, r, a, b, w;
   int eqn, var;
   int peqn, pvar;
+  int positive_definite;
 
   int i, j, status, mode;
   dbl v[DIM];			       
@@ -2453,6 +2454,8 @@ assemble_stress_conf(dbl tt,
   dbl gamma[DIM][DIM];                
   dbl det_J;                            
   dbl d_det_J_dmesh_pj; 
+  dbl s_max;
+  dbl sum,tmp1;
 
   dbl mass;			        
   dbl mass_a, mass_b;
@@ -2479,6 +2482,7 @@ assemble_stress_conf(dbl tt,
   dbl g[DIM][DIM];       
   dbl gt[DIM][DIM];        
   dbl h_diffusion;
+  dbl det_s;
 
   //Tensors for dot products
   dbl s_dot_s[DIM][DIM]; 
@@ -2778,19 +2782,26 @@ assemble_stress_conf(dbl tt,
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
 
-			  
-			  diffusion = 0.;
-                          h_diffusion = 7.5E-5;
-			  if ( pd->e[eqn] & T_DIFFUSION )
-			    {
-                              for (p=0; p<dim; p++)
-                                {
-                                  diffusion += bf[eqn]->grad_phi[i][p]*grad_s[p][a][b];
-                                }
-                              diffusion *= - det_J * wt * h3;
-			      diffusion *= h_diffusion*pd->etm[eqn][(LOG2_DIFFUSION)];
+			  diffusion = 0.0; 
+                          if (pd->e[eqn] & T_DIFFUSION)
+                            {
+                              // Check whether the conformation tensor is positive-definite
+                              // If it is positive definite, positive_definite = 1
+                              // If it is not positive definite, positive_definite = 0
+                              //positive_definite_check(s, &positive_definite);
+                              //if( !positive_definite )
+                                //{
+                                  h_diffusion = 7.5e-5;
+                                  //h_diffusion = 0.;
+                                    for (p=0; p<dim; p++) 
+                                      {
+                                        diffusion += bf[eqn]->grad_phi[i][p]*grad_s[p][a][b];
+                                      }
+                                  diffusion *= det_J * wt * h3;
+                                  diffusion *= h_diffusion*pd->etm[eqn][(LOG2_DIFFUSION)];
+                                //}
 			    }
-			  
+ 
 			  source = 0.0;
 			  if(pd->e[eqn] & T_SOURCE)
 			    {
@@ -3207,6 +3218,26 @@ assemble_stress_conf(dbl tt,
 					      advection *=  h3*det_J ;					      
 					      advection *= wt_func*wt*at*pd->etm[eqn][(LOG2_ADVECTION)];
 					    }
+
+                                          diffusion = 0.0;
+                                          if(pd->e[eqn] & T_DIFFUSION)
+                                            {
+                                              // Check whether the conformation tensor is positive-definite
+                                              positive_definite_check(s, &positive_definite);
+                                              //if( !positive_definite)
+                                                //{
+					          h_diffusion = 7.5e-5;
+				                  for(w=0; w < dim; w++)
+					            {
+					                if((a==p) && (b==q))
+						          {
+						            diffusion += bf[eqn]->grad_phi[i][w] * bf[var]->grad_phi[j][w];
+					                  }
+						    }
+ 				                  diffusion *= det_J * wt * h3;
+					          diffusion *= h_diffusion * pd->etm[eqn][(LOG2_DIFFUSION)];
+ 					        //}
+					    }
 					    
 					  source = 0.0;		      				  
 					  if(pd->e[eqn] & T_SOURCE)
@@ -3233,7 +3264,7 @@ assemble_stress_conf(dbl tt,
 					      source *= det_J*h3*wt_func*wt*pd->etm[eqn][(LOG2_SOURCE)];
 					    }
 					  
-					  lec->J[peqn][pvar][i][j] += mass + advection + source;
+					  lec->J[peqn][pvar][i][j] += mass + advection + diffusion + source;
 					}
 				    }
 				}
@@ -6044,7 +6075,59 @@ stress_eqn_pointer(int v_s[MAX_MODES][DIM][DIM])
   v_s[7][2][2] = POLYMER_STRESS33_7;
 
   return(status);
-}  
+} 
+
+void positive_definite_check(dbl s[DIM][DIM], int *positive_definite)
+  {
+    int r,w;
+    dbl s_max,tmp1,sum;
+    dbl det_s;
+    int dim;
+
+    dim   = pd->Num_Dim;
+
+    *positive_definite = 1;
+
+    // Check for positive-definiteness of conformation tensor
+    // Are all the diagonals positive?
+    for (w=0; w<dim; w++)
+      {
+        if(s[w][w] < 0.0) *positive_definite = 0;
+      }
+    // Check if largest element is on diagonal
+    s_max = 0.0;
+    for (w=0; w<dim; w++)
+      {
+        if(s[w][w] > s_max) s_max = s[w][w];
+      }
+    for (w=0; w<dim; w++)
+      {
+        for (r=0; r<dim; r++)
+          {
+  	  if(r != w)
+              {
+                if(s[w][r] > s_max) *positive_definite = 0;
+              }
+          }
+      }
+    // Solve for det(s)
+    det_s = s[0][0]*s[1][1] - s[0][1] * s[1][0];
+    if(det_s < 0.) *positive_definite = 0;
+    // Check that s[a][a] + s[b][b] > 2*s[a][b] for a != b
+    for (w=0; w<dim; w++)
+      {
+        for (r=0; r<dim; r++)
+          {
+  	  if(r != w)
+              {
+                tmp1 = s[r][w] * 2.;
+                sum = s[r][r] + s[w][w];
+                if(tmp1 > sum) *positive_definite = 0;
+              }
+          }
+      }
+  }  
+ 
 /*****************************************************************************/
 /* END OF FILE mm_fill_stress.c */
 /*****************************************************************************/
