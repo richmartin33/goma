@@ -142,6 +142,8 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   double *resid_vector_1, *x_1;
   double dx;
   int *irow, *jcolumn, *nelem;
+  int v_s[MAX_MODES][DIM][DIM];
+  int mode;
   int num_elems, num_dofs;
   int my_elem_num, my_node_num, elem_num, node_num;
   int elem_already_listed;
@@ -177,6 +179,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   nj = calloc(sizeof(double), ams->bindx[numProcUnknowns]);
   memcpy(nj, ams->val, ams->bindx[numProcUnknowns]*(sizeof(double)));
  
+  // Load stress equation pointers
+  stress_eqn_pointer(v_s);
+
   resid_vector_save = (double *) array_alloc(1, numProcUnknowns, sizeof(double));
   memcpy(resid_vector_save, resid_vector, numProcUnknowns*(sizeof(double)));
  
@@ -415,10 +420,13 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	  var_i = idv[i][0];
           var_j = idv[j][0];
 
+          for (mode=0; mode < vn->modes; mode++)
+          {
 	        /* Only for stress terms */
 	  //if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
 	  //    (idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33)) continue;
-	  if (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) continue;
+	  //if (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) continue;
+	  if (idv[i][0] < v_s[mode][0][0] || idv[i][0] > v_s[mode][2][2]) continue;
 
           if (Inter_Mask[var_i][var_j]) {
 
@@ -429,6 +437,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	    }
 	    nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
 	  }
+          } // Loop over modes
 
         }
 

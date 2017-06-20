@@ -150,7 +150,6 @@ void slow_square_dgemm(int transpose_b, int N, double A[N][N], double B[N][N], d
 void
 initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
 {
-  // assume there is only 1 mode atm
   int idx;
 
   double s[VIM][VIM];
@@ -171,119 +170,125 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
   VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;
   VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mu_struct;
 
-  int mode = 0;
+  int mode,mn;
   double lambda;
   double mup;
 
-  ve[mode]  = ve_glob[0][mode];
+  for (mn = 0; mn < upd->Num_Mat; mn++) // mn = Material Number
+  {
+    for (mode=0; mode<vn_glob[mn]->modes; mode++)
+    {
+    ve[mode]  = ve_glob[mn][mode];
   
-  for (node = 0; node < num_total_nodes; node++) {
-    memset(WORK, 0, sizeof(double)*LWORK);
-    memset(A, 0.0, sizeof(double)*VIM*VIM);
+    for (node = 0; node < num_total_nodes; node++) {
+      memset(WORK, 0, sizeof(double)*LWORK);
+      memset(A, 0.0, sizeof(double)*VIM*VIM);
 
-    idx = 0;
-    for (v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
-      s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
-      idx++;
-    }
+      idx = 0;
+      for (v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
+        s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
+        idx++;
+      }
 
-    mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      mup = viscosity(ve[mode]->gn, gamma, d_mup);
     
-    if(ve[mode]->time_constModel == CONSTANT)
-      {
-	lambda = ve[mode]->time_const;
-      }
-    else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
-      {
-	lambda = mup/ve[mode]->time_const;
-      }
+      if(ve[mode]->time_constModel == CONSTANT)
+        {
+	  lambda = ve[mode]->time_const;
+        }
+      else if(ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW)
+        {
+	  lambda = mup/ve[mode]->time_const;
+        }
 
-    // skip node if stress variables not found
-    if (s_idx[0] == -1 || s_idx[1] == -1 || s_idx[2] == -1) continue;
+      // skip node if stress variables not found
+      if (s_idx[0] == -1 || s_idx[1] == -1 || s_idx[2] == -1) continue;
 
-    // get conformation tensor from initial guess
-    s[0][0] = x[s_idx[0]];
-    s[0][1] = x[s_idx[1]];
-    s[1][0] = x[s_idx[1]];
-    s[1][1] = x[s_idx[2]];
+      // get conformation tensor from initial guess
+      s[0][0] = x[s_idx[0]];
+      s[0][1] = x[s_idx[1]];
+      s[1][0] = x[s_idx[1]];
+      s[1][1] = x[s_idx[2]];
 
-    // Convert stress to c
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
-	s[i][j] = (lambda/mup) * s[i][j] + delta(i,j);
+      // Convert stress to c
+      for (i = 0; i < VIM; i++) {
+        for (j = 0; j < VIM; j++) {
+	  s[i][j] = (lambda/mup) * s[i][j] + delta(i,j);
+        }
       }
-    }
     
-    // convert to column major
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
-	A[i*VIM + j] = s[j][i];
+      // convert to column major
+      for (i = 0; i < VIM; i++) {
+        for (j = 0; j < VIM; j++) {
+	  A[i*VIM + j] = s[j][i];
+        }
       }
-    }
 
-    double W[VIM];
+      double W[VIM];
 
-    // eig solver
-    dsyev_("V", "U", &N, A, &LDA, W, WORK, &LWORK, &INFO, 1, 1);
+      // eig solver
+      dsyev_("V", "U", &N, A, &LDA, W, WORK, &LWORK, &INFO, 1, 1);
 
-    double U[VIM][VIM];
+      double U[VIM][VIM];
 
-    // transpose (revert to row major)
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
-	U[i][j] = A[j*VIM + i];
+      // transpose (revert to row major)
+      for (i = 0; i < VIM; i++) {
+        for (j = 0; j < VIM; j++) {
+	  U[i][j] = A[j*VIM + i];
+        }
       }
-    }
 
-    // Take log of diagonal
-    double D[VIM][VIM];
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
-	if (i == j) {
-	  D[i][j] = log(W[i]);
-	} else {
-	  D[i][j] = 0.0;
-	}
+      // Take log of diagonal
+      double D[VIM][VIM];
+      for (i = 0; i < VIM; i++) {
+        for (j = 0; j < VIM; j++) {
+	  if (i == j) {
+	    D[i][j] = log(W[i]);
+	  } else {
+	    D[i][j] = 0.0;
+	  }
+        }
       }
-    }
 
-    /* matrix multiplication, the slow way */
-    slow_square_dgemm(0, VIM, U, D, log_s);
+      /* matrix multiplication, the slow way */
+      slow_square_dgemm(0, VIM, U, D, log_s);
   
-    // multiply by transpose
-    slow_square_dgemm(1, VIM, log_s, U, D);
+      // multiply by transpose
+      slow_square_dgemm(1, VIM, log_s, U, D);
 
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
-	log_s[i][j] = D[i][j];
+      for (i = 0; i < VIM; i++) {
+        for (j = 0; j < VIM; j++) {
+	  log_s[i][j] = D[i][j];
+        }
       }
-    }
 
-    x[s_idx[0]] = log_s[0][0];
-    x[s_idx[1]] = log_s[0][1];
-    x[s_idx[2]] = log_s[1][1];
+      x[s_idx[0]] = log_s[0][0];
+      x[s_idx[1]] = log_s[0][1];
+      x[s_idx[2]] = log_s[1][1];
 
-   /* printf("Node %d:\n", node);
+     /* printf("Node %d:\n", node);
 
-    printf("C = [\n");
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 2; j++) {
-	printf("%g ", s[i][j]);
+      printf("C = [\n");
+      for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+	  printf("%g ", s[i][j]);
+        }
+        printf("\n");
       }
-      printf("\n");
-    }
-    printf("]\n");
+      printf("]\n");
 
-    printf("log(C) = [\n");
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 2; j++) {
-	printf("%g ", log_s[i][j]);
+      printf("log(C) = [\n");
+      for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+	  printf("%g ", log_s[i][j]);
+        }
+        printf("\n");
       }
-      printf("\n");
-    }
-    printf("]\n"); */
+      printf("]\n"); */
     
-  }
+    } // Loop over nodes
+    } // Loop over modes
+  } // Loop over materials
 }
 
 
