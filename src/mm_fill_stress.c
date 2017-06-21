@@ -2776,7 +2776,11 @@ assemble_stress_conf(dbl tt,
  			    {  
 			      advection +=  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
 			      if( ucwt != 0.) advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
-			      if( lcwt != 0.) advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+			      if( lcwt != 0.) 
+		                {
+			          advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+			          advection += (g[a][b] + gt[a][b]) * (ucwt - lcwt - 1.0);
+			        }
 			      
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
@@ -2852,8 +2856,12 @@ assemble_stress_conf(dbl tt,
 		      
 		      R_advection =  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
 		      if(ucwt != 0.) R_advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
-		      if(lcwt != 0.) R_advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
-		      
+		      if( lcwt != 0.) 
+		        {
+       	                  R_advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+		          R_advection += (g[a][b] + gt[a][b]) * (ucwt - lcwt - 1.0);
+	                }
+ 
 		      R_source = Z*s[a][b]/lambda;
 		      if(a==b)
 			{
@@ -2907,8 +2915,11 @@ assemble_stress_conf(dbl tt,
 				    {
 				      advection +=  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
 				      if( ucwt != 0.) advection -= ucwt*(gt_dot_s[a][b] + s_dot_g[a][b]);
-				      if( lcwt != 0.) advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
-				      
+				      if( lcwt != 0.) 
+			                {
+			                  advection += lcwt*(s_dot_gt[a][b] + g_dot_s[a][b]);
+                                          advection += (g[a][b]+gt[a][b]) * (ucwt - lcwt - 1.0);
+			                }
 				      advection *= wt_func*d_at_dT[j]*det_J*wt*h3;
 				      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
 				    }     
@@ -3166,6 +3177,11 @@ assemble_stress_conf(dbl tt,
 						{
 						  advection -= ucwt*(s[p][b]*(double)delta(a,q) + s[a][p]*(double)delta(b,q));
 						  advection += lcwt*(s[a][q]*(double)delta(p,b) + s[q][b]*(double)delta(a,p));
+					          if(lcwt != 0)
+ 				                    {
+					              advection += ((double)delta(a,p)*(double)delta(b,q) + (double)delta(b,p)
+                                                                      *(double)delta(a,q)) * (ucwt - lcwt - 1.0);
+				                    }
 						  advection *= phi_j*h3*det_J;
 						  advection *= wt_func*wt*at*pd->etm[eqn][(LOG2_ADVECTION)];
 						}
