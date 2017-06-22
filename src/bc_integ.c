@@ -1084,7 +1084,14 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
         case STRESS_DEVELOPED_BC:
-          stress_no_v_dot_gradS(func_stress, d_func_stress, delta_t, theta);
+          if (vn->evssModel == CONF_EVSS)
+            {
+              stress_no_v_dot_gradS_conf(func_stress, d_func_stress, delta_t, theta);
+            }
+          else
+            {
+              stress_no_v_dot_gradS(func_stress, d_func_stress, delta_t, theta);
+            }
           break;
 
 
