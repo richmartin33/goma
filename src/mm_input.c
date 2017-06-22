@@ -4764,6 +4764,7 @@ rd_ac_specs(FILE *ifp,
                 if( fscanf(ifp,"%lf",&augc_initial_value[iAC]) != 1 )
                       {
           fprintf(stderr,"%s:\tError reading augc_initial_value[%d]\n", yo, iAC);
+          fprintf(stderr,"\tAdd AC value after initialize?\n");
                       }
               }
         }
@@ -11291,6 +11292,10 @@ usage(const int exit_flag)
 	  "\t-c_mp INT                       Continuation: Method property ID\n");
   fprintf(stdout, 
 	  "\t-bc_list                        List BC tags for continuation\n");
+  fprintf(stdout, 
+	  "\t-wr_int                         Turn Write Intermediate Results On\n");
+  fprintf(stdout, 
+	  "\t-time_pl INT                    read_exoII_file time plane (default last)\n");
   fprintf(stdout, 
 	  "\t-v          --version           Print code version and exit\n");
 

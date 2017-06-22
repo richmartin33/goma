@@ -182,6 +182,7 @@ load_extra_unknownsAC(int iAC,    /* ID NUMBER OF AC'S */
         case SPLINEY_RS_BC:
         case SPLINEZ_RS_BC:
         case FILLET_BC:
+        case ROLL_FLUID_BC:
         case UVARY_BC:
         case VVARY_BC:
         case WVARY_BC:
@@ -726,6 +727,7 @@ update_parameterAC(int iAC,      /* ID NUMBER OF The AC */
 		case SPLINEY_RS_BC:
 		case SPLINEZ_RS_BC:
 		case FILLET_BC:
+		case ROLL_FLUID_BC:
 		case UVARY_BC:
 		case VVARY_BC:
 		case WVARY_BC:
@@ -799,6 +801,7 @@ update_parameterAC(int iAC,      /* ID NUMBER OF The AC */
         case SPLINEY_RS_BC:
         case SPLINEZ_RS_BC:
         case FILLET_BC:
+        case ROLL_FLUID_BC:
         case UVARY_BC:
         case VVARY_BC:
         case WVARY_BC:
@@ -1221,7 +1224,7 @@ user_aug_cond(int iAC,
   const int Jac_state = af->Assemble_Jacobian;
 
   double p_save, dp_save = 0.0;
-  double fd_factor=1.0E-05;
+  double fd_factor=FD_FACTOR;
 
   double *res_p, *res_m, xm, *x = mf_args->x;
  
@@ -1275,7 +1278,7 @@ user_aug_cond(int iAC,
       p_save = x_AC[iAC];
       /*  */
       dp_save = fd_factor*p_save;
-      dp_save = dp_save == 0.0 ? fd_factor : dp_save;
+      dp_save = (fabs(dp_save) < fd_factor ? fd_factor : dp_save);
       /*  */
       x_AC[iAC] = p_save+dp_save;
 
@@ -1433,7 +1436,7 @@ user_aug_cond(int iAC,
 	  p_save = x_AC[jAC];
 	  
 	  dp_save = fd_factor*p_save;
- 	  dp_save = dp_save == 0.0 ? fd_factor : dp_save;
+          dp_save = (fabs(dp_save) < fd_factor ? fd_factor : dp_save);
 	  /*  */
 	  x_AC[jAC] = p_save+dp_save;
 
@@ -2163,7 +2166,7 @@ estimate_bAC(  int iAC,
 	       MF_Args *mf_args)
 {
   double p_save, dp_save;
-  double fd_factor=1.0E-05;
+  double fd_factor=FD_FACTOR;
 
   double *res_p, *res_m, xm;
   int  err=-99;
@@ -2175,7 +2178,7 @@ estimate_bAC(  int iAC,
   p_save = x_AC[iAC];
       /*  */
   dp_save = fd_factor*p_save;
-  dp_save = dp_save == 0.0 ? fd_factor : dp_save;
+  dp_save = (fabs(dp_save) < fd_factor ? fd_factor : dp_save);
 	  /*  */
   x_AC[iAC] = p_save+dp_save;
 
@@ -2300,7 +2303,7 @@ estimate_dAC_LSvel(  int iAC,
   static char *yo = "estimate_dAC";
 
   double p_save, dp_save;
-  double fd_factor=1.0E-05;
+  double fd_factor=FD_FACTOR;
 
   double inventory_p, inventory_m, xm, *x = mf_args->x;
   /*  int ielem, err=-99;
@@ -2319,7 +2322,7 @@ estimate_dAC_LSvel(  int iAC,
 	  p_save = x_AC[jAC];
       
 	  dp_save = fd_factor*p_save;
-	  dp_save = dp_save == 0.0 ? fd_factor : dp_save;
+          dp_save = (fabs(dp_save) < fd_factor ? fd_factor : dp_save);
 	  /*  */
 
 	  x_AC[jAC] = p_save+dp_save;
@@ -2373,7 +2376,7 @@ estimate_dAC_ALC(int iAC,
  */
 {
   double p_save, dp_save;
-  double fd_factor=1.0E-05;
+  double fd_factor=FD_FACTOR;
 
   double *res_p, *res_m,  *x = mf_args->x, *xdot = mf_args->xdot;
   int jAC;
@@ -2394,7 +2397,7 @@ estimate_dAC_ALC(int iAC,
 /* Set perturbation to continuation parameter (in x_AC) */
   p_save = x_AC[iAC];
   dp_save = fd_factor * p_save;
-  if (p_save == 0.0) dp_save = fd_factor;
+  dp_save = (fabs(dp_save) < fd_factor ? fd_factor : dp_save);
 
 /* Apply positive perturbation */
   x_AC[iAC] = p_save + dp_save;
