@@ -3261,11 +3261,7 @@ assemble_stress_conf(dbl tt,
 					      source_a = Z/lambda*phi_j*(double)delta(a,p)*(double)delta(b,q);
  					      if(p==q)
 						{
-						  source_a +=  s[a][b]*dZ_dtrace/lambda*phi_j;				
-						  if(a==b)
-						    {
-						      source_a -= dZ_dtrace/lambda*phi_j*(double)delta(a,p)*(double)delta(b,q);
-						    }
+						  source_a +=  eps*Z/lambda*phi_j*(s[a][b]-(double)delta(a,b));				
 						}
 		      
 					      source_b = 0.0;

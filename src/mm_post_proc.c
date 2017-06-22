@@ -8987,6 +8987,31 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
                   "conf stress yy", FALSE);
       index++;
       index_post++;
+
+      // Loop over any additional viscoelastic modes
+      for (mode = 1; mode<MAX_MODES; mode++)
+        {
+          for (a=0; a<VIM; a++)
+            {
+              for (b=0; b<VIM; b++)
+                {
+                  if(a<=b)
+                    {
+                      if (Num_Var_In_Type[v_s[mode][a][b]])
+                        {
+                          sprintf(species_name, "MS%d%d_%d", a+1, b+1, mode);
+                          sprintf(species_desc, "conf stress %d%d_%d",
+                                   a+1, b+1, mode);
+                          set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]",
+                                       species_desc, FALSE);
+                          index++;
+                          index_post++;
+                        }
+                    }
+                }
+            }
+        }
+
       if (Num_Dim > 2)
         {
           EH(-1, "Conf Stress not implemented for 3D");
