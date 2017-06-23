@@ -7401,7 +7401,7 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
 *****************************************************************************/
 {
 
-  int j, eqn, var, a, b, p, q, mode, w, k;
+  int i,j, eqn, var, a, b, p, q, mode, w, k;
   int R_s[MAX_MODES][DIM][DIM];
   int v_s[MAX_MODES][DIM][DIM];
   int inv_v_s [DIM][DIM];
@@ -7426,6 +7426,8 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
   dbl g_dot_s[DIM][DIM];
   dbl gt_dot_s[DIM][DIM];
 
+  dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
+
   /* polymer viscosity and derivatives */
   dbl mup;
   VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
@@ -7436,7 +7438,6 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
   dbl at = 0.0;
   dbl d_at_dT[MDE];
   dbl wlf_denom;
-  dbl h_diffusion = 7.5e-5;
 
   /* constitutive equation parameters */
   dbl alpha;     /* This is the Geisekus mobility parameter */
@@ -7451,6 +7452,7 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
   dbl mass, advection, source;
 
   dbl phi_j;
+  dbl grad_s[DIM][DIM][DIM];
 
   if(af->Assemble_LSA_Mass_Matrix)
     return;
@@ -7548,20 +7550,7 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
   for ( mode=0; mode<vn->modes; mode++)
      {
 
-      /*
-       * Load polymeric stress tensor for each mode
-       */
-      for (a = 0; a < VIM; a++) {
-          for (b = 0; b < VIM; b++) {
-               s[a][b] = fv->S[mode][a][b];
-               if (pd->TimeIntegration != STEADY)  {
-                  s_dot[a][b] = fv_dot->S[mode][a][b];
-               } else {
-	          s_dot[a][b] = 0.;
-               }
-          }
-      }
-
+      load_modal_pointers(mode, tt, dt, s, s_dot, grad_s, d_grad_s_dmesh);
 
       /* Calculate trace of stress tensor */
       trace = 0.0;
@@ -7645,16 +7634,6 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
                     advection *= at * pd->etm[eqn][(LOG2_ADVECTION)];
                    }
 
-                 diffusion = 0.0;
-                 if (pd->e[eqn] & T_DIFFUSION)
-                   {
-                     for (p=0; p<dim; p++)
-                       {
-                         diffusion += bf[eqn]->grad_phi[i][p]*grad_s[p][a][b];
-                       }
-                     diffusion *= h_diffusion*pd->etm[eqn][(LOG2_DIFFUSION)];
-                   }
-
                  /* Source term */
                  source = 0.;
                  source +=  Z * s[a][b]/lambda;
@@ -7663,13 +7642,13 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
                    {
                      source1 = s_dot_s[a][b]-2.0*s[a][b];
                      if(a==b) source1 -= 1.0;
-                     source1 *= alpha/lambda
+                     source1 *= alpha/lambda;
                      source += source1;
                    } 
                    
                  source *= pd->etm[eqn][(LOG2_SOURCE)];
 
-                 func[mode][k] += mass + advection + diffusion + source;
+                 func[mode][k] += mass + advection + source;
                 }
              }
          }
@@ -7895,18 +7874,6 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
                                        }
                                      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
  
-                                     /* diffusion term */
-                                     diffusion = 0;
-                                     for (w=0; w<dim; w++)
-                                       {
-                                         if((a==p) && (b==q))
-                                           {
-                                             diffusion += bf[eqn]->grad_phi[i][w] * bf[var]->grad_phi[j][w];
-              		                   }
-			               }
-                                     diffusion *= h_diffusion * pd->etm[eqn][(LOG2_DIFFUSION)];
-                                     
-
                                      /* source term */
                                      source = Z * phi_j * (double)delta(a,p) * (double)delta(b,q) / lambda;
                                      if( p == q)  source +=  (s[a][b]-(double)delta(a,b)) * dZ_dtrace * phi_j / lambda;
@@ -7921,7 +7888,7 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
                                      source *= pd->etm[eqn][(LOG2_SOURCE)];
 
                                      /* Load them up */
-                                     d_func[mode][k][var][j] += mass + advection + diffusion + source;
+                                     d_func[mode][k][var][j] += mass + advection + source;
                                     }
                              }
                          }
