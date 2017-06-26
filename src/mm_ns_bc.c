@@ -7421,6 +7421,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   dbl exp_s_dot[DIM][DIM];
   dbl g[DIM][DIM];         /* velocity gradient tensor */
   dbl gt[DIM][DIM];        /* transpose of velocity gradient tensor */
+  dbl source_a;
 
   /* dot product tensors */
 
@@ -7450,7 +7451,6 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   dbl ucwt, lcwt; /* Upper convected derviative weight, Lower convected derivative weight */
   dbl eps;	 /* This is the PTT elongation parameter */
   dbl Z=1.0;         /* This is the factor appearing in front of the stress tensor in PTT */
-  dbl dZ_dtrace =0.0;
 
   /* ETMs*/
   dbl mass, advection, source, source1;
@@ -7600,7 +7600,6 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
       eps = ve[mode]->eps;
 
       Z = exp( eps*(trace - (double) dim));
-      dZ_dtrace = Z*eps;
 
       //Use analytic exp_s and d_exp_s_ds in 2D (Kane et al. 2009)
       if(VIM==2)
@@ -7920,7 +7919,12 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
 
                                      /* source term */
                                      source = Z * phi_j * d_exp_s_ds[a][b][p][q] / lambda; 
-                                     if( p == q)  source +=  exp_s[a][b] * dZ_dtrace * phi_j;
+                                     if( eps != 0.0 && a==b )  
+		                       {
+                                         source_a = (exp_s[a][b]-(double)delta(a,b))/lambda;
+                                         source_a *= eps * Z * d_exp_s_ds[a][b][p][q] * phi_j;
+                                         source += source_a;
+ 			               }
                                      if (alpha != 0.)
                                        {
                                         source1 = 0.;

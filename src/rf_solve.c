@@ -150,11 +150,11 @@ void slow_square_dgemm(int transpose_b, int N, double A[N][N], double B[N][N], d
 void
 initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
 {
-  int idx;
+  int a,b;
 
   double s[VIM][VIM];
   double log_s[VIM][VIM];
-  int s_idx[3];
+  int s_idx[2][2];
   int M = VIM;
   int N = VIM;
   int LDA = N;
@@ -173,6 +173,9 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
   int mode,mn;
   double lambda;
   double mup;
+  int v_s[MAX_MODES][DIM][DIM];
+
+  stress_eqn_pointer(v_s);
 
   for (mn = 0; mn < upd->Num_Mat; mn++) // mn = Material Number
   {
@@ -184,13 +187,14 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
       memset(WORK, 0, sizeof(double)*LWORK);
       memset(A, 0.0, sizeof(double)*VIM*VIM);
 
-      idx = 0;
-      for (v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
-        s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
-        idx++;
+      for (a=0; a < 2; a++) {
+        for (b=0; b < 2; b++) {
+          v = v_s[mode][a][b];
+          s_idx[a][b] = Index_Solution(node, v, 0, 0, -2);
+        }
       }
 
-      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      mup = viscosity(ve[mode]->gn, gamma_dot, d_mup);
     
       if(ve[mode]->time_constModel == CONSTANT)
         {
@@ -202,18 +206,18 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
         }
 
       // skip node if stress variables not found
-      if (s_idx[0] == -1 || s_idx[1] == -1 || s_idx[2] == -1) continue;
+      if (s_idx[0][0] == -1 || s_idx[0][1] == -1 || s_idx[1][1] == -1) continue;
 
-      // get conformation tensor from initial guess
-      s[0][0] = x[s_idx[0]];
-      s[0][1] = x[s_idx[1]];
-      s[1][0] = x[s_idx[1]];
-      s[1][1] = x[s_idx[2]];
+      // get stress tensor from initial guess
+      s[0][0] = x[s_idx[0][0]];
+      s[0][1] = x[s_idx[0][1]];
+      s[1][0] = x[s_idx[0][1]];
+      s[1][1] = x[s_idx[1][1]];
 
       // Convert stress to c
       for (i = 0; i < VIM; i++) {
         for (j = 0; j < VIM; j++) {
-	  s[i][j] = (lambda/mup) * s[i][j] + delta(i,j);
+	  s[i][j] = (lambda/mup) * s[i][j] + (double)delta(i,j);
         }
       }
     
@@ -262,9 +266,9 @@ initial_guess_stress_to_log_conf(double *x, int num_total_nodes)
         }
       }
 
-      x[s_idx[0]] = log_s[0][0];
-      x[s_idx[1]] = log_s[0][1];
-      x[s_idx[2]] = log_s[1][1];
+      x[s_idx[0][0]] = log_s[0][0];
+      x[s_idx[0][1]] = log_s[0][1];
+      x[s_idx[1][1]] = log_s[1][1];
 
      /* printf("Node %d:\n", node);
 
