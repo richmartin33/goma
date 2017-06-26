@@ -2481,7 +2481,7 @@ assemble_stress_conf(dbl tt,
   int use_G=0;
   dbl g[DIM][DIM];       
   dbl gt[DIM][DIM];        
-  dbl h_diffusion;
+  dbl h_diffusion = 7.5e-5;
   dbl det_s;
 
   //Tensors for dot products
@@ -2795,8 +2795,6 @@ assemble_stress_conf(dbl tt,
                               //positive_definite_check(s, &positive_definite);
                               //if( !positive_definite )
                                 //{
-                                  h_diffusion = 7.5e-5;
-                                  //h_diffusion = 0.;
                                     for (p=0; p<dim; p++) 
                                       {
                                         diffusion += bf[eqn]->grad_phi[i][p]*grad_s[p][a][b];
@@ -3242,7 +3240,6 @@ assemble_stress_conf(dbl tt,
                                               positive_definite_check(s, &positive_definite);
                                               //if( !positive_definite)
                                                 //{
-					          h_diffusion = 7.5e-5;
 				                  for(w=0; w < dim; w++)
 					            {
 					                if((a==p) && (b==q))
