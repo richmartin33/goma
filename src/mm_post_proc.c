@@ -2248,9 +2248,11 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
     d_mup = NULL; 
     double lambda;
+    double R1[DIM][DIM];
+    double eig_values[DIM];
     dbl exp_s[DIM][DIM];
     for (mode = 0; mode < vn->modes; mode++) {
-      compute_exp_s(fv->S[mode], exp_s);
+      compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
       mup = viscosity(ve[mode]->gn, gamma, d_mup);
       // Polymer time constant
       lambda = 0.0;

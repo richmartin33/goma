@@ -2491,6 +2491,9 @@ assemble_stress_log_conf(dbl tt,
   dbl g_dot_exp_s[DIM][DIM];
   dbl exp_s_dot_gt[DIM][DIM];
 
+  dbl omega_dot_s[DIM][DIM];
+  dbl s_dot_omega[DIM][DIM];
+
   //Polymer viscosity
   dbl mup;
   VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
@@ -2504,10 +2507,26 @@ assemble_stress_log_conf(dbl tt,
   //Consitutive prameters
   dbl alpha;     
   dbl lambda=0;    
-  dbl ucwt, lcwt;
   dbl eps;      
   dbl Z=1.0;        
   dbl dZ_dtrace =0.0;
+
+  // Decomposition of velocity vector
+  dbl omega[DIM][DIM];
+  dbl B1[DIM][DIM];
+  dbl M1[DIM][DIM];
+  dbl M2[DIM][DIM];
+  dbl omega2[DIM][DIM];
+  dbl omega3;
+  dbl eig_values[DIM];
+  dbl R1[DIM][DIM];
+  dbl R1_T[DIM][DIM];
+  dbl Rt_dot_gradv[DIM][DIM];
+  dbl tmp[DIM][DIM];
+  dbl tmp2[DIM][DIM];
+
+  dbl exp_s_inv[DIM][DIM];
+  dbl det_exp_s;
 
   //Advective terms
   dbl v_dot_del_s[DIM][DIM];
@@ -2691,83 +2710,94 @@ assemble_stress_log_conf(dbl tt,
 	  lambda = mup/ve[mode]->time_const;
 	}
 
-      //Use the analytic Jacobian for d/ds(e^s) in 2d (Kane et al. 2009)
       if(VIM==2)
 	{
-          //term1 = sqrt(pow(s[1][1]-s[0][0],2.0) + 4.*s[0][1]*s[0][1]);
-          //if (term1 < 1.E-5)
-            //{
-              compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
-            //}
-          //else
-           //{
-           //  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
-           //}
-	}
-      //Use finite difference Jacobian for d/ds(e^2) in cylindrical and 3d
-      else
-	{
-	   EH(-1, "The log-conformation isn't ready for 3d or cylindrical problems yet.  You could fix that by implementing some finite differences.");
-	  //Compute e^s
-	  double WORK[100], W[DIM], eval[DIM], evec[DIM][DIM];
-	  double *A;
-	  int LWORK = 100, INFO, k;
-	  // Do a spectral decomposition
-	  asdv(&A, ei->ielem_dim * ei->ielem_dim);
-	  for(i=0; i<ei->ielem_dim; i++)
-	    {
-	      W[i] = 0;
-	      for(j=0 ; j<ei->ielem_dim; j++)
-		{
-		  if(i<=j)
-		    {
-		      A[j*ei->ielem_dim + i] = s[i][j];
-		    }
-		  else
-		    {
-		      A[j*ei->ielem_dim + i] = s[j][i];
-		    }
-		}
-	    }
-  
-	  dsyev_("V", "U", &(ei->ielem_dim), A, &(ei->ielem_dim), W, WORK, &LWORK, &INFO, 1, 1); 
-  
-	  if (INFO > 0) EH(-1, "dsyev falied to converge");
-	  if (INFO < 0) EH(-1, "an argument of dsyev had an illegal value");
-
-
-	  // Do some exponentiation
-	  for(j=0; j<ei->ielem_dim; j++)
-	    {
-	      for(i=0; i<ei->ielem_dim; i++)
-		{
-		  for(k=0; k<ei->ielem_dim; k++)
-		    {
-		      exp_s[i][j] = A[i*ei->ielem_dim+k]*exp(W[k])*A[j*ei->ielem_dim+k];
-		    }
-		}
-	    }
-
-	  //Compute d/ds(e^s)
-	  //Make a routine to compute finite differences  log_conf_jac_FD(s,exp_s,d_exp_s_ds);
-
+          compute_exp_s(s, exp_s, eig_values, R1);
 	}
 
-      //Compute d/dt{e^s}
-      for(a=0; a<VIM; a++)
-	{
-	  for(b=0; b<VIM; b++)
+      // Decompose velocity gradient
+      // Following Fattal and Kupferman, J. Non-Newt. Fluid Mech (2004)
+
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+ 	      R1_T[i][j] = R1[j][i];
+            }
+        }
+
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+              Rt_dot_gradv[i][j] = 0.;
+              for(w=0; w<VIM; w++)
+                {
+                  Rt_dot_gradv[i][j] += R1_T[i][w] * gt[w][j];
+                }
+            }
+        }
+
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+              M1[i][j] = 0.;
+              for(w=0; w<VIM; w++)
+                {
+                  M1[i][j] += Rt_dot_gradv[i][w] * R1[w][j];
+                }
+            }
+        }
+
+      memset(M2, 0, sizeof(double) * DIM*DIM);
+      memset(omega, 0, sizeof(double) * DIM*DIM);
+      memset(omega2, 0, sizeof(double) * DIM*DIM);
+      memset(B1, 0, sizeof(double) * DIM*DIM);
+
+      M2[0][0] = M1[0][0];
+      M2[1][1] = M1[1][1];
+
+      omega3 = (eig_values[1]*M1[0][1] + eig_values[0]*M1[1][0]) / (eig_values[1]-eig_values[0]);
+      
+      omega2[0][1] = omega3;
+      omega2[1][0] = -omega3;
+
+      // Calculate B1 = R * M2 * R_T
+      // Calculate omega = R * omega2 * R_T
+
+      for(i=0; i<VIM; i++)
+        {
+	  for(j=0; j<VIM; j++)
 	    {
-	      exp_s_dot[a][b] = 0.0;
-	      for(i=0; i<VIM; i++)
-		{
-		  for(j=0; j<VIM; j++)
-		    {
-		      exp_s_dot[a][b] += d_exp_s_ds[a][b][i][j]*s_dot[i][j];
-		    }
-		}
+              tmp[i][j] = 0.;
+              tmp2[i][j] = 0.;
+	      for(w=0; w<VIM; w++)
+ 	        {
+                  tmp[i][j] += R1[i][k] * M2[k][j];
+                  tmp2[i][j] += R1[i][k] * omega2[k][j];
+	        }
 	    }
-	}
+	}	      
+
+      for(i=0; i<VIM; i++)
+        {
+	  for(j=0; j<VIM; j++)
+	    {
+	      for(w=0; w<VIM; w++)
+ 	        {
+                  B1[i][j] += tmp[i][k] * R1_T[k][j];
+                  omega[i][j] += tmp2[i][k] * R1_T[k][j];
+	        }
+	    }
+	}	      
+
+      // Solve for inverse of exp_s (2D)
+      det_exp_s = exp_s[0][0] * exp_s[1][1] - exp_s[0][1] * exp_s[0][1];
+      exp_s_inv[0][0] = exp_s[1][1]/det_exp_s;
+      exp_s_inv[0][1] = -exp_s[0][1]/det_exp_s;
+      exp_s_inv[1][0] = exp_s_inv[0][1];
+      exp_s_inv[1][1] = exp_s[0][0]/det_exp_s;
 
       //Predetermine advective terms
       trace = 0.0;
@@ -2775,13 +2805,6 @@ assemble_stress_log_conf(dbl tt,
       for(a=0; a<VIM; a++)
       	{
       	  trace += exp_s[a][a];
-      	  for(b=0; b<VIM; b++)
-      	    {
-	      for(q=0; q<dim; q++)
-		{
-		  grad_exp_s[q][a][b] = fv->grad_exp_s[mode][q][a][b];
-		}
-	    }
 	}
 
       
@@ -2789,12 +2812,12 @@ assemble_stress_log_conf(dbl tt,
       	{
       	  for(b=0; b<VIM; b++)
       	    {
-      	      v_dot_del_exp_s[a][b] = 0.0;
-      	      x_dot_del_exp_s[a][b] = 0.0;
+      	      v_dot_del_s[a][b] = 0.0;
+      	      x_dot_del_s[a][b] = 0.0;
       	      for(q=0; q<dim; q++)
       		{
-      		  v_dot_del_exp_s[a][b] +=  v[q]*grad_exp_s[q][a][b];
-      		  x_dot_del_exp_s[a][b] +=  x_dot[q]*grad_exp_s[q][a][b];
+      		  v_dot_del_s[a][b] +=  v[q]*grad_s[q][a][b];
+      		  x_dot_del_s[a][b] +=  x_dot[q]*grad_s[q][a][b];
       		}
       	    }
       	}
@@ -2805,20 +2828,11 @@ assemble_stress_log_conf(dbl tt,
       //Exponential term for PTT
       Z = exp(eps*(trace - (double) dim)); dZ_dtrace = eps * Z;
 
-      ucwt = 1.0 - ve[mode]->xi / 2.0;
-      lcwt = ve[mode]->xi / 2.0;
-
       //Compute some tensor dot products
       
-      (void) tensor_dot(exp_s, g, exp_s_dot_g, VIM);
-      (void) tensor_dot(gt, exp_s, gt_dot_exp_s, VIM);
-      (void) tensor_dot(exp_s, exp_s, exp_s_dot_exp_s, VIM);
-      if( lcwt != 0.)
-        {
-          (void) tensor_dot(exp_s, gt, exp_s_dot_gt, VIM);
-          (void) tensor_dot(g, exp_s, g_dot_exp_s, VIM);
-        }
-
+      (void) tensor_dot(omega, s, omega_dot_s, VIM);
+      (void) tensor_dot(s, omega, s_dot_omega, VIM);
+      (void) tensor_dot(s, s, s_dot_s, VIM);
 
       //If you need more terms, this would be a good place to compute before entering the residual assembly
 
@@ -2851,7 +2865,7 @@ assemble_stress_log_conf(dbl tt,
 			    {
 			      if(pd->e[eqn] & T_MASS)
 				{
-				  mass  = exp_s_dot[a][b];
+				  mass  = s_dot[a][b];
 				  mass *= wt_func*at*det_J*wt*h3;
 				  mass *= pd->etm[eqn][(LOG2_MASS)];
 				}
@@ -2860,13 +2874,9 @@ assemble_stress_log_conf(dbl tt,
 			  advection = 0;
 			  if(pd->e[eqn] & T_ADVECTION)
  			    {  
-			      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b];
-                              if( ucwt != 0.) advection -= ucwt*(gt_dot_exp_s[a][b] + exp_s_dot_g[a][b]);
-                              if( lcwt != 0.)
-                                {
-                                  advection += lcwt*(g_dot_exp_s[a][b] + exp_s_dot_gt[a][b]);
-                                  advection += (g[a][b] + gt[a][b]) * (ucwt - lcwt - 1.0);
-                                }
+			      advection += v_dot_del_s[a][b] - x_dot_del_s[a][b];
+                              advection -= omega_dot_s[a][b] - s_dot_omega[a][b] ;
+                              advection -= 2.0*B1[a][b];
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
@@ -2874,11 +2884,7 @@ assemble_stress_log_conf(dbl tt,
                           source = 0.0; 
                           if(pd->e[eqn] & T_SOURCE)
                             {
-                              source +=  Z*exp_s[a][b]/lambda;
-                              if(a==b)
-                                {
-                                  source -= Z/lambda;
-                                }
+                              source +=  ((double)delta(a,b) - exp_s_inv[a][b]) * Z / lambda;
 
                               if(alpha!=0.0)
                                 {
@@ -6082,7 +6088,9 @@ stress_eqn_pointer(int v_s[MAX_MODES][DIM][DIM])
 
 void
 compute_exp_s(double s[DIM][DIM],
-	      double exp_s[DIM][DIM])
+	      double exp_s[DIM][DIM],
+              double eig_values[DIM],
+              double R[DIM][DIM])
 {
 
   int M = VIM;
@@ -6111,17 +6119,19 @@ compute_exp_s(double s[DIM][DIM],
   dsyev_("V", "U", &N, A, &LDA, W, WORK, &LWORK, &INFO, 1, 1);
 
   double U[VIM][VIM];
+  double D[VIM][VIM];
 
   // transpose (revert to row major)
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
+      R[i][j] = A[j*VIM + i];
       U[i][j] = A[j*VIM + i];
     }
   }
 
   // exponentiate diagonal
-  double D[VIM][VIM];
   for (i = 0; i < VIM; i++) {
+    eig_values[i] = W[i];
     for (j = 0; j < VIM; j++) {
       if (i == j) {
 	D[i][j] = exp(W[i]);
@@ -6167,13 +6177,15 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 {
   double s_p[DIM][DIM];
   double exp_s_p[DIM][DIM];
+  double eig_values[DIM];
+  double R1[DIM][DIM];
   int m,n,i,j,p,q;
 
   memset(exp_s_p,    0, sizeof(double)*DIM*DIM);
   memset(exp_s,      0, sizeof(double)*DIM*DIM);
   memset(d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
  
-  compute_exp_s(s, exp_s);
+  compute_exp_s(s, exp_s, eig_values, R1);
 
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
@@ -6192,7 +6204,7 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       }
 
       // find exp_s at perturbed value
-      compute_exp_s(s_p, exp_s_p);
+      compute_exp_s(s_p, exp_s_p, eig_values, R1);
 
       // approximate derivative
       for (p = 0; p < VIM; p++) {

@@ -10036,6 +10036,8 @@ load_fv_grads(void)
 
 			  double s[DIM][DIM];
 			  double exp_s[DIM][DIM];
+		          double R1[DIM][DIM];
+		          double eig_values[DIM];
 
 			  for (a = 0; a < VIM; a++) {
 			    for (b = 0; b < VIM; b++) {
@@ -10048,7 +10050,7 @@ load_fv_grads(void)
 			    }
 			  }
 
-			  compute_exp_s(s, exp_s);
+			  compute_exp_s(s, exp_s, eig_values, R1);
 			  
 			  fv->grad_exp_s[mode][r][p][q] += 
 			    exp_s[p][q] * bf[v]->grad_phi[i][r] ;
@@ -28040,6 +28042,9 @@ fluid_stress_conf( double Pi[DIM][DIM],
   dbl P;
   dbl s11,s12,s22;
 
+  dbl R1[DIM][DIM];
+  dbl eig_values[DIM];
+
   // Flag to use a Fortin DEVSS-G stress formulation
   int evss_f;
   int use_mup;                          // Flag for mup or mus on DEVSS-G term
@@ -28166,7 +28171,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
       term1 = sqrt(pow(s22-s11,2.0) + 4.*s12*s12);
       if (term1 < 1.E-5)
         {
-          compute_exp_s(fv->S[mode], exp_s[mode]);
+          compute_exp_s(fv->S[mode], exp_s[mode], eig_values, R1);
         }
       else
        {

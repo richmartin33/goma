@@ -204,6 +204,8 @@ compute_d_exp_s_ds(dbl [DIM][DIM],                   //s - stress
 
 void
 compute_exp_s(double [DIM][DIM],
+	      double [DIM][DIM],
+              double [DIM],
 	      double [DIM][DIM]);
 
 #endif /* _MM_FILL_STRESS_H */

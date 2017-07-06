@@ -699,6 +699,8 @@ evaluate_flux(
     			  {
                             dbl log_c[DIM][DIM];
                             dbl exp_s[DIM][DIM];
+                            dbl R1[DIM][DIM];
+  		            dbl eig_values[DIM];
                             for ( ve_mode=0; ve_mode<vn->modes; ve_mode++)
                               {
                                 if(vn->evssModel==LOG_CONF)
@@ -710,7 +712,7 @@ evaluate_flux(
                                             log_c[i][j] = fv->S[ve_mode][i][j];
                                           }
                                       }
-                                    compute_exp_s(log_c, exp_s);
+                                    compute_exp_s(log_c, exp_s, eig_values, R1);
                                   }
 
 			        for ( a=0; a<VIM; a++)
