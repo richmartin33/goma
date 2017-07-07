@@ -426,7 +426,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	  //if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
 	  //    (idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33)) continue;
 	  //if (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) continue;
-	  if (idv[i][0] < v_s[mode][0][0] || idv[i][0] > v_s[mode][2][2]) continue;
+	  //if (idv[i][0] < v_s[mode][0][0] || idv[i][0] > v_s[mode][2][2]) continue;
 
           if (Inter_Mask[var_i][var_j]) {
 

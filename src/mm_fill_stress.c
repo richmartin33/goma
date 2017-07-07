@@ -2524,9 +2524,13 @@ assemble_stress_log_conf(dbl tt,
   dbl Rt_dot_gradv[DIM][DIM];
   dbl tmp[DIM][DIM];
   dbl tmp2[DIM][DIM];
+  dbl tmp3[DIM][DIM];
+  dbl N2;
+  dbl N1[DIM][DIM];
+  dbl N3[DIM][DIM];
 
   dbl exp_s_inv[DIM][DIM];
-  dbl det_exp_s;
+  dbl det_exp_s, eig_tmp, R_tmp;
 
   //Advective terms
   dbl v_dot_del_s[DIM][DIM];
@@ -2718,6 +2722,20 @@ assemble_stress_log_conf(dbl tt,
       // Decompose velocity gradient
       // Following Fattal and Kupferman, J. Non-Newt. Fluid Mech (2004)
 
+      if(eig_values[1] > eig_values[0])
+        {
+          eig_tmp = eig_values[0];
+          eig_values[0] = eig_values[1];
+          eig_values[1] = eig_tmp;
+
+          for(i=0; i<VIM; i++)
+            {
+              R_tmp = R1[i][0];
+              R1[i][0] = R1[i][1];
+              R1[i][1] = R_tmp;
+            }
+        }
+
       for(i=0; i<VIM; i++)
         {
           for(j=0; j<VIM; j++)
@@ -2754,6 +2772,8 @@ assemble_stress_log_conf(dbl tt,
       memset(omega, 0, sizeof(double) * DIM*DIM);
       memset(omega2, 0, sizeof(double) * DIM*DIM);
       memset(B1, 0, sizeof(double) * DIM*DIM);
+      memset(N1, 0, sizeof(double) * DIM*DIM);
+      memset(N3, 0, sizeof(double) * DIM*DIM);
 
       M2[0][0] = M1[0][0];
       M2[1][1] = M1[1][1];
@@ -2762,6 +2782,11 @@ assemble_stress_log_conf(dbl tt,
       
       omega2[0][1] = omega3;
       omega2[1][0] = -omega3;
+
+      N2 = (M1[0][1] + M1[1][0]) / ( 1.0/eig_values[1] - 1.0/eig_values[0]);
+
+      N3[0][1] = N2;
+      N3[1][0] = -N2;
 
       // Calculate B1 = R * M2 * R_T
       // Calculate omega = R * omega2 * R_T
@@ -2772,10 +2797,12 @@ assemble_stress_log_conf(dbl tt,
 	    {
               tmp[i][j] = 0.;
               tmp2[i][j] = 0.;
+              tmp3[i][j] = 0.;
 	      for(w=0; w<VIM; w++)
  	        {
-                  tmp[i][j] += R1[i][k] * M2[k][j];
-                  tmp2[i][j] += R1[i][k] * omega2[k][j];
+                  tmp[i][j] += R1[i][w] * M2[w][j];
+                  tmp2[i][j] += R1[i][w] * omega2[w][j];
+                  tmp3[i][j] += R1[i][w] * N3[w][j];
 	        }
 	    }
 	}	      
@@ -2786,8 +2813,9 @@ assemble_stress_log_conf(dbl tt,
 	    {
 	      for(w=0; w<VIM; w++)
  	        {
-                  B1[i][j] += tmp[i][k] * R1_T[k][j];
-                  omega[i][j] += tmp2[i][k] * R1_T[k][j];
+                  B1[i][j] += tmp[i][w] * R1_T[w][j];
+                  omega[i][j] += tmp2[i][w] * R1_T[w][j];
+                  N1[i][j] += tmp3[i][w] * R1_T[w][j];
 	        }
 	    }
 	}	      
@@ -2888,11 +2916,7 @@ assemble_stress_log_conf(dbl tt,
 
                               if(alpha!=0.0)
                                 {
-                                  source1 = exp_s_dot_exp_s[a][b] - 2.0*exp_s[a][b];
-                                  if(a==b)
-                                    {
-                                      source1 += 1.0; 
-                                    }
+                                  source1 = exp_s[a][b] - 2.0 + exp_s_inv[a][b];
                                   source1 *= alpha/lambda;
                                   source += source1;
                                 }
@@ -6097,6 +6121,7 @@ compute_exp_s(double s[DIM][DIM],
   int N = VIM;
   int LDA = N;
   int i,j,k;
+  double tmp;
 
   int INFO;
   int LWORK = 20;
@@ -6124,14 +6149,12 @@ compute_exp_s(double s[DIM][DIM],
   // transpose (revert to row major)
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
-      R[i][j] = A[j*VIM + i];
       U[i][j] = A[j*VIM + i];
     }
   }
 
   // exponentiate diagonal
   for (i = 0; i < VIM; i++) {
-    eig_values[i] = W[i];
     for (j = 0; j < VIM; j++) {
       if (i == j) {
 	D[i][j] = exp(W[i]);
@@ -6144,7 +6167,7 @@ compute_exp_s(double s[DIM][DIM],
   /* matrix multiplication, the slow way */
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
-      double tmp = 0;
+      tmp = 0.;
       for (k = 0; k < VIM; k++) {
 	tmp += U[i][k] * D[k][j];
       }
@@ -6155,7 +6178,7 @@ compute_exp_s(double s[DIM][DIM],
   // multiply by transpose
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
-      double tmp = 0;
+      tmp = 0.;
       for (k = 0; k < VIM; k++) {
 	tmp += exp_s[i][k] * U[j][k];
       }
@@ -6168,7 +6191,34 @@ compute_exp_s(double s[DIM][DIM],
       exp_s[i][j] = D[i][j];
     }
   }
-}
+
+ // Solve for R and eigenvalues of conformation tensor (exp_s)
+
+ // convert to column major
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
+      A[i*VIM + j] = exp_s[j][i];
+    }    
+  }
+
+  // eig solver
+  dsyev_("V", "U", &N, A, &LDA, W, WORK, &LWORK, &INFO, 1, 1);
+
+  // transpose (revert to row major)
+  for (i = 0; i < VIM; i++) {
+    for (j = 0; j < VIM; j++) {
+      R[i][j] = A[j*VIM + i];
+    }    
+  }
+
+  // Eigenvalues of conformation tensor
+  for (i = 0; i < VIM; i++) {
+    eig_values[i] = W[i];
+  }
+
+} // End compute_exp_s
+
+
 
 void
 compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
