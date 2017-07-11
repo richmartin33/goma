@@ -2916,7 +2916,7 @@ assemble_stress_log_conf(dbl tt,
 
                               if(alpha!=0.0)
                                 {
-                                  source1 = exp_s[a][b] - 2.0 + exp_s_inv[a][b];
+                                  source1 = exp_s[a][b] - 2.0 * (double)delta(a,b) + exp_s_inv[a][b];
                                   source1 *= alpha/lambda;
                                   source += source1;
                                 }
@@ -6223,10 +6223,14 @@ compute_exp_s(double s[DIM][DIM],
 void
 compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 		   dbl exp_s[DIM][DIM],
-		   dbl d_exp_s_ds[DIM][DIM][DIM][DIM])
+		   dbl d_exp_s_ds[DIM][DIM][DIM][DIM],
+		   dbl d_exp_s_inv_ds[DIM][DIM][DIM][DIM])
 {
   double s_p[DIM][DIM];
   double exp_s_p[DIM][DIM];
+  double exp_s_inv[DIM][DIM];
+  double exp_s_inv_p[DIM][DIM];
+  double det_exp_s;
   double eig_values[DIM];
   double R1[DIM][DIM];
   int m,n,i,j,p,q;
@@ -6234,8 +6238,14 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
   memset(exp_s_p,    0, sizeof(double)*DIM*DIM);
   memset(exp_s,      0, sizeof(double)*DIM*DIM);
   memset(d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
+  memset(d_exp_s_inv_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
  
   compute_exp_s(s, exp_s, eig_values, R1);
+  det_exp_s = exp_s[0][0]*exp_s[1][1] - exp_s[0][1]*exp_s[0][1];
+  exp_s_inv[0][0] = exp_s[1][1] / det_exp_s;
+  exp_s_inv[0][1] = -exp_s[0][1] / det_exp_s;
+  exp_s_inv[1][0] = exp_s_inv[0][1];
+  exp_s_inv[1][1] = exp_s[0][0] / det_exp_s;
 
   for (i = 0; i < VIM; i++) {
     for (j = 0; j < VIM; j++) {
@@ -6256,10 +6266,17 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       // find exp_s at perturbed value
       compute_exp_s(s_p, exp_s_p, eig_values, R1);
 
+      det_exp_s = exp_s_p[0][0]*exp_s_p[1][1] - exp_s_p[0][1]*exp_s_p[0][1];
+      exp_s_inv_p[0][0] = exp_s_p[1][1] / det_exp_s;
+      exp_s_inv_p[0][1] = -exp_s_p[0][1] / det_exp_s;
+      exp_s_inv_p[1][0] = exp_s_inv[0][1];
+      exp_s_inv_p[1][1] = exp_s_p[0][0] / det_exp_s;
+
       // approximate derivative
       for (p = 0; p < VIM; p++) {
 	for (q = 0; q < VIM; q++) {
 	  d_exp_s_ds[p][q][i][j] = (exp_s_p[p][q] - exp_s[p][q]) / ds;
+	  d_exp_s_inv_ds[p][q][i][j] = (exp_s_inv_p[p][q] - exp_s_inv[p][q]) / ds;
 	}
       }
       

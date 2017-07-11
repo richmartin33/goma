@@ -28025,6 +28025,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
   // conformation tensor
   dbl exp_s[MAX_MODES][DIM][DIM];
   dbl d_exp_s_ds[MAX_MODES][DIM][DIM][DIM][DIM];
+  dbl d_exp_s_inv_ds[DIM][DIM][DIM][DIM];
 
   // Particle stress for suspension balance model
   dbl tau_p[DIM][DIM];
@@ -28546,7 +28547,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
       term1 = sqrt(pow(s22-s11,2.0) + 4.*s12*s12);
       if (term1 < 1.E-5)
         {
-          compute_d_exp_s_ds(fv->S[mode], exp_s[mode], d_exp_s_ds[mode]);
+          compute_d_exp_s_ds(fv->S[mode], exp_s[mode], d_exp_s_ds[mode], d_exp_s_inv_ds);
         }
       else
        {

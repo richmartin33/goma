@@ -199,8 +199,9 @@ PROTO((dbl [DIM][DIM],              //s -stress
 
 void
 compute_d_exp_s_ds(dbl [DIM][DIM],                   //s - stress
-		   dbl [DIM][DIM],
-		   dbl [DIM][DIM][DIM][DIM]);
+		   dbl [DIM][DIM],                   // exp_s
+		   dbl [DIM][DIM][DIM][DIM],         // d_exp_s_ds
+		   dbl [DIM][DIM][DIM][DIM]);        // d_exp_s_inv_ds
 
 void
 compute_exp_s(double [DIM][DIM],
