@@ -209,4 +209,21 @@ compute_exp_s(double [DIM][DIM],
               double [DIM],
 	      double [DIM][DIM]);
 
+EXTERN void gradv_decomposition( dbl [DIM][DIM],             // log-conformation tensor s
+                                 dbl [DIM][DIM],             // gradv (g)
+                                 dbl [DIM][DIM],             // B, symmetric tensor
+                                 dbl [DIM][DIM],             // omega, anti-symmetric tensor
+                                 dbl [DIM][DIM][DIM][DIM],   // d_B_d_g, derivative of B wrt g
+                                 dbl [DIM][DIM][DIM][DIM],   // d_B_d_s, derivative of B wrt s
+                                 dbl [DIM][DIM][DIM][DIM],   // d_omega_d_g, derivative of omega wrt g
+                                 dbl [DIM][DIM][DIM][DIM]);  // d_omega_d_s, derivative of omega wrt s
+
+EXTERN void compute_B_omega(     dbl [DIM][DIM],             // log-conformation tensor s
+                                 dbl [DIM][DIM],             // exp_s
+                                 dbl [DIM][DIM],             // gradv_transpose
+                                 dbl [DIM],                  // eigenvalues of exp_s
+                                 dbl [DIM][DIM],             // R1, matrix containing eigenvectors of exp_s
+                                 dbl [DIM][DIM],             // B, symmetric tensor
+                                 dbl [DIM][DIM]);            // omega, anti-symmetric tensor
+
 #endif /* _MM_FILL_STRESS_H */

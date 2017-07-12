@@ -7420,18 +7420,12 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   dbl d_exp_s_inv_ds[DIM][DIM][DIM][DIM];
   dbl trace = 0.0;         /* trace of the stress tensor */
   dbl s_dot[DIM][DIM];     /* stress tensor from last time step */
-  dbl exp_s_dot[DIM][DIM];
   dbl g[DIM][DIM];         /* velocity gradient tensor */
   dbl gt[DIM][DIM];        /* transpose of velocity gradient tensor */
   dbl source_a;
 
   /* dot product tensors */
-
   dbl s_dot_s[DIM][DIM];
-  dbl gt_dot_exp_s[DIM][DIM];
-  dbl exp_s_dot_g[DIM][DIM];
-  dbl g_dot_exp_s[DIM][DIM];
-  dbl exp_s_dot_gt[DIM][DIM];
 
   /* polymer viscosity and derivatives */
   dbl mup;
@@ -7449,35 +7443,17 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   // Decomposition of velocity vector
   dbl omega[DIM][DIM];
   dbl B1[DIM][DIM];
-  dbl M1[DIM][DIM];
-  dbl M2[DIM][DIM];
-  dbl omega2[DIM][DIM];
-  dbl omega3;
   dbl eig_values[DIM];
   dbl R1[DIM][DIM];
-  dbl R1_T[DIM][DIM];
-  dbl Rt_dot_gradv[DIM][DIM];
-  dbl tmp[DIM][DIM];
-  dbl tmp2[DIM][DIM];
-  dbl tmp3[DIM][DIM];
-  dbl N2;
-  dbl N1[DIM][DIM];
-  dbl N3[DIM][DIM];
-
   dbl exp_s_inv[DIM][DIM];
   dbl det_exp_s, eig_tmp, R_tmp;
 
   dbl omega_dot_s[DIM][DIM];
   dbl s_dot_omega[DIM][DIM];
-  dbl d_alpha_d_g[DIM][DIM][DIM][DIM];
-  dbl d_omega1_d_g[DIM][DIM];
-  dbl d_omega2_d_g[DIM][DIM][DIM][DIM];
   dbl d_omega_d_g[DIM][DIM][DIM][DIM];
-  dbl d_B1_d_g[DIM][DIM][DIM][DIM];
   dbl d_B_d_g[DIM][DIM][DIM][DIM];
-  dbl c1;
-  dbl d_m11_d_g[DIM][DIM];
-  dbl d_m22_d_g[DIM][DIM];
+  dbl d_omega_d_s[DIM][DIM][DIM][DIM];
+  dbl d_B_d_s[DIM][DIM][DIM][DIM];
 
   /* constitutive equation parameters */
   dbl alpha;     /* This is the Geisekus mobility parameter */
@@ -7614,168 +7590,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
       // Decompose velocity gradient
       // Following Fattal and Kupferman, J. Non-Newt. Fluid Mech (2004)
 
-      if(eig_values[1] > eig_values[0])
-        {
-          eig_tmp = eig_values[0];
-          eig_values[0] = eig_values[1];
-          eig_values[1] = eig_tmp;
-
-          for(i=0; i<VIM; i++)
-            {
-              R_tmp = R1[i][0];
-              R1[i][0] = R1[i][1];
-              R1[i][1] = R_tmp;
-            }
-        }
-
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
-            {
-              R1_T[i][j] = R1[j][i];
-            }
-        }
-
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
-            {
-              Rt_dot_gradv[i][j] = 0.;
-              for(w=0; w<VIM; w++)
-                {
-                  Rt_dot_gradv[i][j] += R1_T[i][w] * gt[w][j];
-                }
-            }
-        }
-
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
-            {
-              M1[i][j] = 0.;
-              for(w=0; w<VIM; w++)
-                {
-                  M1[i][j] += Rt_dot_gradv[i][w] * R1[w][j];
-                }
-            }
-        }
-
-      siz = sizeof(double) * DIM*DIM;
-      memset(M2, 0, siz);
-      memset(omega, 0, siz);
-      memset(omega2, 0, siz);
-      memset(B1, 0, siz);
-      memset(N1, 0, siz);
-      memset(N3, 0, siz);
-
-      siz = sizeof(double) * DIM*DIM*DIM*DIM;
-      memset(d_alpha_d_g, 0 , siz);
-      memset(d_omega2_d_g, 0, siz);
-      memset(d_omega_d_g, 0, siz);
-      memset(d_B1_d_g, 0, siz);
-
-      M2[0][0] = M1[0][0];
-      M2[1][1] = M1[1][1];
-
-      omega3 = (eig_values[1]*M1[0][1] + eig_values[0]*M1[1][0]) / (eig_values[1]-eig_values[0]);
-
-      omega2[0][1] = omega3;
-      omega2[1][0] = -omega3;
-
-      N2 = (M1[0][1] + M1[1][0]) / ( 1.0/eig_values[1] - 1.0/eig_values[0]);
-
-      N3[0][1] = N2;
-      N3[1][0] = -N2;
-
-      d_alpha_d_g[0][0][0][0] = R1[0][0];
-      d_alpha_d_g[0][0][1][0] = R1[1][0];
-      d_alpha_d_g[0][1][0][1] = R1[0][0];
-      d_alpha_d_g[0][1][1][1] = R1[1][0];
-      d_alpha_d_g[1][0][0][0] = R1[0][1];
-      d_alpha_d_g[1][0][1][0] = R1[1][1];
-      d_alpha_d_g[1][1][0][1] = R1[0][1];
-      d_alpha_d_g[1][1][1][1] = R1[1][1];
-
-      // Calculate B1 = R * M2 * R_T
-      // Calculate omega = R * omega2 * R_T
-
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
-            {
-              tmp[i][j] = 0.;
-              tmp2[i][j] = 0.;
-              tmp3[i][j] = 0.;
-              for(w=0; w<VIM; w++)
-                {
-                  tmp[i][j] += R1[i][w] * M2[w][j];
-                  tmp2[i][j] += R1[i][w] * omega2[w][j];
-                  tmp3[i][j] += R1[i][w] * N3[w][j];
-                }
-            }
-        }
-
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
-            {
-              for(w=0; w<VIM; w++)
-                {
-                  B1[i][j] += tmp[i][w] * R1_T[w][j];
-                  omega[i][j] += tmp2[i][w] * R1_T[w][j];
-                  N1[i][j] += tmp3[i][w] * R1_T[w][j];
-                }
-            }
-        }
-
-      // Calculate derivative terms for d_function
-      c1 = 1. / (eig_values[1] - eig_values[0]);
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
-            {
-              d_omega1_d_g[i][j] = c1 * (eig_values[1]*(d_alpha_d_g[0][0][i][j]*R1[0][1] + d_alpha_d_g[0][1][i][j]*R1[1][1])
-                                         + eig_values[0]*(d_alpha_d_g[1][0][i][j]*R1[0][0] + d_alpha_d_g[1][1][i][j]*R1[1][0]));
-              d_omega2_d_g[0][1][i][j] = d_omega1_d_g[i][j];
-              d_omega2_d_g[1][0][i][j] = -d_omega1_d_g[i][j];
-
-              d_m11_d_g[i][j] = d_alpha_d_g[0][0][i][j]*R1[0][0] + d_alpha_d_g[0][1][i][j]*R1[1][0];
-              d_m22_d_g[i][j] = d_alpha_d_g[1][0][i][j]*R1[0][1] + d_alpha_d_g[1][1][i][j]*R1[1][1];
-              d_B1_d_g[0][0][i][j] = d_m11_d_g[i][j];
-              d_B1_d_g[1][1][i][j] = d_m22_d_g[i][j];
-	    }
-        }
-
-      for (p=0; p<VIM; p++)
-        {
-          for (q=0; q<VIM; q++)
-	    {
- 	      for (i=0; i<VIM; i++)
-	        {
-		  for (j=0; j<VIM; j++)
-		    {
-		      tmp[i][j] = 0.;
-                      tmp2[i][j] = 0.;
- 		      for (k=0; k<VIM; k++)
-		        {
-		          tmp[i][j] += R1[i][k]*d_omega2_d_g[k][j][p][q];
-		          tmp2[i][j] += R1[i][k]*d_B1_d_g[k][j][p][q];
-		        }
-		    }
-	        }
-              for (i=0; i<VIM; i++)
-	        {
-	          for(j=0; j<VIM; j++)
-		    {
-		      for(k=0; k<VIM; k++)
-		        {
-		          d_omega_d_g[i][j][p][q] += tmp[i][k]*R1_T[k][j];
-		          d_B_d_g[i][j][p][q] += tmp2[i][k]*R1_T[k][j];
-		        }
-		    }
-		}
-	    } // for q
-        } // for p 
+      gradv_decomposition(s, g, B1, omega, d_B_d_g, d_B_d_s, d_omega_d_g, d_omega_d_s);
 
       // Solve for inverse of exp_s (2D)
       det_exp_s = exp_s[0][0] * exp_s[1][1] - exp_s[0][1] * exp_s[0][1];
@@ -8078,6 +7893,15 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                      /* advection term */
                                      advection = 0.0;
 			             advection += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p)*omega[q][b];
+                                     if (p != q)
+                                       {
+			                 advection += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q)*omega[p][b];
+			               }
+                                     for (k=0; k<VIM; k++)
+                                       {
+                                         advection += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q];
+                                       }
+                                     advection -= 2.0 * d_B_d_s[a][b][p][q];
                                      advection *=  phi_j*at;
                                      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
 

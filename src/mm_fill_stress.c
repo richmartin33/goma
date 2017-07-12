@@ -6402,3 +6402,252 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
   //d/ds22{e^s22}
   d_exp_s_ds[1][1][1][1] = (a2*inva1cubed) * ((pow(c-a, 3) + 4*b*b*((c-a) + 1.))*a3 + a1 * (pow(a-c, 2) + 2*b*b) * a4);
 }
+
+
+void gradv_decomposition(dbl s[DIM][DIM],                     // log-conformation tensor
+                         dbl g[DIM][DIM],                     // gradv
+                         dbl B1[DIM][DIM],                    // B, symmetric tensor
+                         dbl omega[DIM][DIM],                 // omega, anit-symmetric tensor
+                         dbl d_B_d_g[DIM][DIM][DIM][DIM],     // derivative of B wrt g
+                         dbl d_B_d_s[DIM][DIM][DIM][DIM],     // derivative of B wrt s
+                         dbl d_omega_d_g[DIM][DIM][DIM][DIM], // derivative of omega wrt g
+                         dbl d_omega_d_s[DIM][DIM][DIM][DIM]) // derivative of omega wrt s
+{
+
+  int i,j,p,q,siz,k;
+  dbl gt[DIM][DIM];
+  dbl s_p[DIM][DIM], exp_s[DIM][DIM];
+  dbl ds = 1e-6;
+  dbl exp_s_p[DIM][DIM], R1_p[DIM][DIM];
+  dbl B1_p[DIM][DIM], omega_p[DIM][DIM];
+  dbl B1_p2[DIM][DIM], omega_p2[DIM][DIM];
+  dbl eig_values[DIM];
+  dbl eig_values_p[DIM];
+  dbl d_alpha_d_g[DIM][DIM][DIM][DIM];
+  dbl tmp[DIM][DIM], tmp2[DIM][DIM];
+  dbl R1_T[DIM][DIM], R1[DIM][DIM];
+
+  dbl d_omega1_d_g[DIM][DIM];
+  dbl c1;
+  dbl d_omega2_d_g[DIM][DIM][DIM][DIM];
+  dbl d_m11_d_g[DIM][DIM];
+  dbl d_m22_d_g[DIM][DIM];
+  dbl d_B1_d_g[DIM][DIM][DIM][DIM];
+
+  memset(R1_T, 0 , sizeof(double)*DIM*DIM);
+  memset(gt, 0, sizeof(double)*DIM*DIM);
+  memset(s_p, 0 , sizeof(double)*DIM*DIM);
+
+  for (i=0; i<VIM; i++)
+    {
+      for (j=0; j<VIM; j++)
+        {
+          gt[i][j] = g[j][i];
+        }
+    }
+
+  compute_B_omega(s, exp_s, gt, eig_values, R1, B1, omega);
+  for (i=0; i<VIM; i++)
+    {
+      for (j=0; j<VIM; j++)
+        {
+          R1_T[i][j] = R1[j][i];
+        }
+    }
+
+  // Calculate d_omega_d_s and d_B_d_s by perturbation
+
+  for (i=0; i<VIM; i++)
+    {
+      for (j=0; j<VIM; j++)
+        {
+          for (p=0; p<VIM; p++)
+            {
+              for (q=0; q<VIM; q++)
+                {
+                  s_p[p][q] = s[p][q];
+                }
+            }
+          s_p[i][j] += ds;
+          if (i != j) s_p[j][i] = s_p[i][j];
+
+          compute_B_omega(s_p, exp_s_p, gt, eig_values_p, R1_p, B1_p, omega_p);
+          for (p=0; p<VIM; p++)
+            {
+              for (q=0; q<VIM; q++)
+                {
+                  d_omega_d_s[p][q][i][j] = (omega_p[p][q] - omega[p][q]) / ds;
+                  d_B_d_s[p][q][i][j] = (B1_p[p][q] - B1[p][q]) / ds;
+                }
+            }
+        }
+    }
+
+  siz = sizeof(double)*DIM*DIM;
+  memset(d_omega1_d_g, 0, siz);
+
+  siz = sizeof(double)*DIM*DIM*DIM*DIM;
+  memset(d_alpha_d_g, 0 , siz);
+  memset(d_omega_d_g, 0, siz);
+  memset(d_omega2_d_g, 0, siz);
+  memset(d_B1_d_g, 0 , siz);
+  memset(d_B_d_g, 0 , siz);
+
+  // Calculate d_omega_d_g and d_B_d_g
+  d_alpha_d_g[0][0][0][0] = R1[0][0];
+  d_alpha_d_g[0][0][1][0] = R1[1][0];
+  d_alpha_d_g[0][1][0][1] = R1[0][0];
+  d_alpha_d_g[0][1][1][1] = R1[1][0];
+  d_alpha_d_g[1][0][0][0] = R1[0][1];
+  d_alpha_d_g[1][0][1][0] = R1[1][1];
+  d_alpha_d_g[1][1][0][1] = R1[0][1];
+  d_alpha_d_g[1][1][1][1] = R1[1][1];
+
+  // Calculate derivative terms for d_function
+  c1 = 1. / (eig_values[1] - eig_values[0]);
+  for(i=0; i<VIM; i++)
+    {
+      for(j=0; j<VIM; j++)
+        {
+          d_omega1_d_g[i][j] = c1 * (eig_values[1]*(d_alpha_d_g[0][0][i][j]*R1[0][1] + d_alpha_d_g[0][1][i][j]*R1[1][1])
+                                     + eig_values[0]*(d_alpha_d_g[1][0][i][j]*R1[0][0] + d_alpha_d_g[1][1][i][j]*R1[1][0]));
+          d_omega2_d_g[0][1][i][j] = d_omega1_d_g[i][j];
+          d_omega2_d_g[1][0][i][j] = -d_omega1_d_g[i][j];
+
+          d_m11_d_g[i][j] = d_alpha_d_g[0][0][i][j]*R1[0][0] + d_alpha_d_g[0][1][i][j]*R1[1][0];
+          d_m22_d_g[i][j] = d_alpha_d_g[1][0][i][j]*R1[0][1] + d_alpha_d_g[1][1][i][j]*R1[1][1];
+          d_B1_d_g[0][0][i][j] = d_m11_d_g[i][j];
+          d_B1_d_g[1][1][i][j] = d_m22_d_g[i][j];
+        }
+    }
+
+  for (p=0; p<VIM; p++)
+    {
+      for (q=0; q<VIM; q++)
+        {
+          for (i=0; i<VIM; i++)
+            {
+              for (j=0; j<VIM; j++)
+                {
+                  tmp[i][j] = 0.;
+                  tmp2[i][j] = 0.;
+                  for (k=0; k<VIM; k++)
+                    {
+                      tmp[i][j] += R1[i][k]*d_omega2_d_g[k][j][p][q];
+                      tmp2[i][j] += R1[i][k]*d_B1_d_g[k][j][p][q];
+                    }
+                }
+            }
+          for (i=0; i<VIM; i++)
+            {
+              for(j=0; j<VIM; j++)
+                {
+                  for(k=0; k<VIM; k++)
+                    {
+                      d_omega_d_g[i][j][p][q] += tmp[i][k]*R1_T[k][j];
+                      d_B_d_g[i][j][p][q] += tmp2[i][k]*R1_T[k][j];
+                    }
+                }
+            }
+        } // for q
+    } // for p 
+
+
+}
+
+
+void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformation tensor
+                         dbl exp_s[DIM][DIM],                 // exp_s
+                         dbl gt[DIM][DIM],                    // gradv transpose
+                         dbl eig_values[DIM],                 // eigenvalues of exp_s 
+                         dbl R1[DIM][DIM],                         // eigenvectors of exp_s
+                         dbl B1[DIM][DIM],                    // B, symmetric tensor
+                         dbl omega[DIM][DIM])                 // omega, anti-symmetric tensor
+{
+  dbl R1_T[DIM][DIM];
+  dbl Rt_dot_gradv[DIM][DIM];
+  dbl M1[DIM][DIM], M2[DIM][DIM];
+  int i,j,p,q,siz,w;
+  dbl tmp[DIM][DIM], tmp2[DIM][DIM];
+  dbl omega2[DIM][DIM];
+  dbl omega3;
+  
+  compute_exp_s(s, exp_s, eig_values, R1);
+  memset(R1_T, 0 , sizeof(double)*DIM*DIM);
+  for(i=0; i<VIM; i++)
+    {
+      for(j=0; j<VIM; j++)
+        {
+          R1_T[i][j] = R1[j][i];
+        }
+    }
+
+  for(i=0; i<VIM; i++)
+    {
+      for(j=0; j<VIM; j++)
+        {
+          Rt_dot_gradv[i][j] = 0.; 
+          for(w=0; w<VIM; w++)
+            {
+              Rt_dot_gradv[i][j] += R1_T[i][w] * gt[w][j];
+            }
+        }
+    }
+
+  for(i=0; i<VIM; i++)
+    {
+      for(j=0; j<VIM; j++)
+        {
+          M1[i][j] = 0.;
+          for(w=0; w<VIM; w++)
+            {
+              M1[i][j] += Rt_dot_gradv[i][w] * R1[w][j];
+            }
+        }
+    }
+
+  siz = sizeof(double) * DIM*DIM;
+  memset(M2, 0, siz);
+  memset(omega, 0, siz);
+  memset(omega2, 0, siz);
+  memset(B1, 0, siz);
+
+  M2[0][0] = M1[0][0];
+  M2[1][1] = M1[1][1];
+
+  omega3 = (eig_values[1]*M1[0][1] + eig_values[0]*M1[1][0]) / (eig_values[1]-eig_values[0]);
+
+  omega2[0][1] = omega3;
+  omega2[1][0] = -omega3;
+
+  // Calculate B1 = R * M2 * R_T
+  // Calculate omega = R * omega2 * R_T
+
+  for(i=0; i<VIM; i++)
+    {
+      for(j=0; j<VIM; j++)
+        {
+          tmp[i][j] = 0.;
+          tmp2[i][j] = 0.;
+          for(w=0; w<VIM; w++)
+            {
+              tmp[i][j] += R1[i][w] * M2[w][j];
+              tmp2[i][j] += R1[i][w] * omega2[w][j];
+            }
+        }
+    }
+
+  for(i=0; i<VIM; i++)
+    {
+      for(j=0; j<VIM; j++)
+        {
+          for(w=0; w<VIM; w++)
+            {
+              B1[i][j] += tmp[i][w] * R1_T[w][j];
+              omega[i][j] += tmp2[i][w] * R1_T[w][j];
+            }
+        }
+    }
+
+} // End of compute_B_omega
+
