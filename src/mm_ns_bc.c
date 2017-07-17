@@ -7847,11 +7847,12 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                   advection = 0.0;
                                   if (lambda != 0.)
                                     {
+			             // Switching p and q since derivatives evaluated according to gt
  		                     for (k=0; k<VIM; k++)
 			               {
- 				         advection += -d_omega_d_g[a][k][p][q]*s[k][b] + s[a][k]*d_omega_d_g[k][b][p][q];
+ 				         advection += -d_omega_d_g[a][k][q][p]*s[k][b] + s[a][k]*d_omega_d_g[k][b][q][p];
 				       }
-			             advection -= 2.0 * d_B_d_g[a][b][p][q];
+			             advection -= 2.0 * d_B_d_g[a][b][q][p];
                                      advection *= phi_j * at;
                                     }
                                   advection *= pd->etm[eqn][(LOG2_ADVECTION)];
