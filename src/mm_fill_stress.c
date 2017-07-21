@@ -6682,7 +6682,7 @@ void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformatio
   int i,j,p,q,siz,w;
   dbl tmp[DIM][DIM], tmp2[DIM][DIM];
   dbl omega2[DIM][DIM];
-  dbl omega3;
+  dbl omega3,d_lambda;
   
   compute_exp_s(s, exp_s, eig_values, R1);
   memset(R1_T, 0 , sizeof(double)*DIM*DIM);
@@ -6727,24 +6727,74 @@ void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformatio
   M2[0][0] = M1[0][0];
   M2[1][1] = M1[1][1];
 
-  omega3 = (eig_values[1]*M1[0][1] + eig_values[0]*M1[1][0]) / (eig_values[1]-eig_values[0]);
+  d_lambda = eig_values[1]-eig_values[0];
+  
+  if(fabs(d_lambda) > 1.e-8)
+    {
+      omega3 = (eig_values[1]*M1[0][1] + eig_values[0]*M1[1][0]) / d_lambda;
+      omega2[0][1] = omega3;
+      omega2[1][0] = -omega3;
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+              tmp2[i][j] = 0.;
+              for(w=0; w<VIM; w++)
+                {
+                  tmp2[i][j] += R1[i][w] * omega2[w][j];
+                }
+            }
+        }
 
-  omega2[0][1] = omega3;
-  omega2[1][0] = -omega3;
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+              for(w=0; w<VIM; w++)
+                {
+                  omega[i][j] += tmp2[i][w] * R1_T[w][j];
+                }
+            }
+        }
+    }
+  else
+    {
+      omega2[0][1] = M1[0][1] + M1[1][0];
+      omega2[1][0] = -omega2[0][1];
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+              tmp2[i][j] = 0.;
+              for(w=0; w<VIM; w++)
+                {
+                  tmp2[i][j] += R1[i][w] * omega2[w][j];
+                }
+            }
+        }
+
+      for(i=0; i<VIM; i++)
+        {
+          for(j=0; j<VIM; j++)
+            {
+              for(w=0; w<VIM; w++)
+                {
+                  omega[i][j] += tmp2[i][w] * R1_T[w][j];
+                }
+            }
+        }
+    }
 
   // Calculate B1 = R * M2 * R_T
-  // Calculate omega = R * omega2 * R_T
 
   for(i=0; i<VIM; i++)
     {
       for(j=0; j<VIM; j++)
         {
           tmp[i][j] = 0.;
-          tmp2[i][j] = 0.;
           for(w=0; w<VIM; w++)
             {
               tmp[i][j] += R1[i][w] * M2[w][j];
-              tmp2[i][j] += R1[i][w] * omega2[w][j];
             }
         }
     }
@@ -6756,7 +6806,6 @@ void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformatio
           for(w=0; w<VIM; w++)
             {
               B1[i][j] += tmp[i][w] * R1_T[w][j];
-              omega[i][j] += tmp2[i][w] * R1_T[w][j];
             }
         }
     }
