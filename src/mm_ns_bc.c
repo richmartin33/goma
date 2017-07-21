@@ -7490,6 +7490,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   v_g[2][1] = VELOCITY_GRADIENT32;
   v_g[2][2] = VELOCITY_GRADIENT33;
 
+  memset( s, 0, sizeof(double)*DIM*DIM);
   memset( exp_s, 0, sizeof(double)*DIM*DIM);
   memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
   memset( d_exp_s_inv_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
@@ -7771,7 +7772,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                           /* Load them up */
                           d_func[mode][k][var][j] += mass + advection + source;
                          }
-                     } /* End of J_S_T */
+                     } /* End of J_S_T *
 
 
                    /* Sensitivities w.r.t. mesh displacement - J_S_d */
@@ -7848,9 +7849,9 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                   if (lambda != 0.)
                                     {
 			             // Switching p and q since derivatives evaluated according to gt
- 		                     for (k=0; k<VIM; k++)
+ 		                     for (w=0; w<VIM; w++)
 			               {
- 				         advection += -d_omega_d_g[a][k][q][p]*s[k][b] + s[a][k]*d_omega_d_g[k][b][q][p];
+ 				         advection += -d_omega_d_g[a][w][q][p]*s[w][b] + s[a][w]*d_omega_d_g[w][b][q][p];
 				       }
 			             advection -= 2.0 * d_B_d_g[a][b][q][p];
                                      advection *= phi_j * at;
@@ -7874,7 +7875,8 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                      {
                       for ( p=0; p<VIM; p++)
                          {
-                          for ( q=0; q<VIM; q++)
+                          for ( q=0; q<VIM; q++) {
+                             if (p<=q)
                              {
                                  var =  v_s[mode][p][q];
 
@@ -7894,13 +7896,9 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                      /* advection term */
                                      advection = 0.0;
 			             advection += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p)*omega[q][b];
-                                     if (p != q)
+                                     for (w=0; w<VIM; w++)
                                        {
-			                 advection += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q)*omega[p][b];
-			               }
-                                     for (k=0; k<VIM; k++)
-                                       {
-                                         advection += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q];
+                                         advection += -d_omega_d_s[a][w][p][q] * s[w][b] + s[a][w] * d_omega_d_s[w][b][p][q];
                                        }
                                      advection -= 2.0 * d_B_d_s[a][b][p][q];
                                      advection *=  phi_j*at;
@@ -7926,6 +7924,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                      /* Load them up */
                                      d_func[mode][k][var][j] += mass + advection + source;
                                     }
+		                } // If p <= q
                              }
                          }
                      } /* End of J_S_S */

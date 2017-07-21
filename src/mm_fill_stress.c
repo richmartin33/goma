@@ -2573,6 +2573,7 @@ assemble_stress_log_conf(dbl tt,
   v_g[2][1] = VELOCITY_GRADIENT32; 
   v_g[2][2] = VELOCITY_GRADIENT33; 
 
+  memset( s, 0, sizeof(double)*DIM*DIM);
   memset( exp_s, 0, sizeof(double)*DIM*DIM);
   memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
 
@@ -3339,33 +3340,26 @@ assemble_stress_log_conf(dbl tt,
 					  
 					    if ( pd->e[eqn] & T_ADVECTION )
 					      {
-					        if(lambda != 0.)
+					        if((a == p) && (b == q))
 						  {
-						    if((a == p) && (b == q))
-						      {
-						        for( r=0; r<dim; r++)
-					                  {
-						            advection +=  (v[r]-x_dot[r])*  bf[var]->grad_phi[j][r];
-						          }
+						    for( r=0; r<dim; r++)
+					              {
+						        advection +=  (v[r]-x_dot[r])*  bf[var]->grad_phi[j][r];
 						      }
+						  }
 						    
-				                    advection_a = 0.;
- 				                    advection_a += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p) * omega[q][b];
- 				                    if (p != q)
-			                            {
-					              advection_a += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q) * omega[p][b];
-				                    }
-				                  for (k=0; k<VIM; k++)
-			                            {
-					              advection_a += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q];
-				                    }
-				                  advection_a -= 2.0 * d_B_d_s[a][b][p][q];
-					          advection_a *= phi_j;
-					          advection += advection_a;
-						  advection *=  h3 * det_J ;
-						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
-						}
-					    }
+				                advection_a = 0.;
+ 				                advection_a += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p) * omega[q][b];
+				                for (k=0; k<VIM; k++)
+			                          {
+					            advection_a += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q];
+				                  }
+				                advection_a -= 2.0 * d_B_d_s[a][b][p][q];
+					        advection_a *= phi_j;
+					        advection += advection_a;
+					        advection *=  h3 * det_J ;
+				                advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
+					      }
 					  
 					  /*
 					   * Diffusion...
@@ -6381,7 +6375,7 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
       det_exp_s = exp_s_p[0][0]*exp_s_p[1][1] - exp_s_p[0][1]*exp_s_p[0][1];
       exp_s_inv_p[0][0] = exp_s_p[1][1] / det_exp_s;
       exp_s_inv_p[0][1] = -exp_s_p[0][1] / det_exp_s;
-      exp_s_inv_p[1][0] = exp_s_inv[0][1];
+      exp_s_inv_p[1][0] = exp_s_inv_p[0][1];
       exp_s_inv_p[1][1] = exp_s_p[0][0] / det_exp_s;
 
       // approximate derivative
@@ -6529,7 +6523,7 @@ void gradv_decomposition(dbl s[DIM][DIM],                     // log-conformatio
   int i,j,p,q,siz,k;
   dbl gt[DIM][DIM];
   dbl s_p[DIM][DIM], exp_s[DIM][DIM];
-  dbl ds = 1e-9;
+  dbl ds = 1e-8;
   dbl exp_s_p[DIM][DIM], R1_p[DIM][DIM];
   dbl B1_p[DIM][DIM], omega_p[DIM][DIM];
   dbl B1_p2[DIM][DIM], omega_p2[DIM][DIM];

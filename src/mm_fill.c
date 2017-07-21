@@ -1517,7 +1517,8 @@ matrix_fill(
           err = segregate_stress_update( x_update );
           EH(err, "assemble_stress_log_conf");
 #ifdef CHECK_FINITE
-          CHECKFINITE("assemble_stress_log_conf");
+          err = CHECKFINITE("assemble_stress_log_conf");
+	  if (err) return -1;
 #endif
         }
       
