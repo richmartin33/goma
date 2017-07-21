@@ -6540,7 +6540,7 @@ void gradv_decomposition(dbl s[DIM][DIM],                     // log-conformatio
   dbl R1_T[DIM][DIM], R1[DIM][DIM];
 
   dbl d_omega1_d_g[DIM][DIM];
-  dbl c1;
+  dbl c1, d_lambda;
   dbl d_omega2_d_g[DIM][DIM][DIM][DIM];
   dbl d_m11_d_g[DIM][DIM];
   dbl d_m22_d_g[DIM][DIM];
@@ -6616,7 +6616,20 @@ void gradv_decomposition(dbl s[DIM][DIM],                     // log-conformatio
   d_alpha_d_g[1][1][1][1] = R1[1][1];
 
   // Calculate derivative terms for d_function
-  c1 = 1. / (eig_values[1] - eig_values[0]);
+  d_lambda = eig_values[1] - eig_values[0];
+  if(fabs(d_lambda) > 1.e-8)
+    {
+      c1 = 1. / d_lambda;
+    }
+  else
+    {
+      c1 = 1.;
+    }
+  //if(fabs(d_lambda) < 1.e-7)
+  //  {
+  //    printf("d_lambda = %f\n", d_lambda);
+  //    scanf("%d",&i);
+  //  }
   for(i=0; i<VIM; i++)
     {
       for(j=0; j<VIM; j++)
