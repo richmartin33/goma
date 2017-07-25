@@ -551,6 +551,7 @@ extern int VON_MISES_STRAIN;
 extern int VON_MISES_STRESS;
 extern int UNTRACKED_SPEC;		/*Untracked Species Concentration */
 extern int LOG_CONF_MAP;               // Map log conf to stress
+extern int CONF_EIGEN;               // Eigenvalues of conformation tensor
 
 
 /*

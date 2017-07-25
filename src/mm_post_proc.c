@@ -261,6 +261,7 @@ int VON_MISES_STRESS = -1;
 int VON_MISES_STRAIN = -1;
 int UNTRACKED_SPEC = -1;
 int LOG_CONF_MAP = -1;
+int CONF_EIGEN = -1;
 
 int len_u_post_proc = 0;	/* size of dynamically allocated u_post_proc
 				 * actually is */
@@ -2288,6 +2289,27 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
               }
             }
           } // for b
+        } // for a
+      }     
+    } // Loop over modes
+  }
+
+  if (CONF_EIGEN != -1 && pd->v[POLYMER_STRESS11] && vn->evssModel == LOG_CONF) {
+    index = 0;
+    VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+    VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+    d_mup = NULL; 
+    double R1[DIM][DIM];
+    double eig_values[DIM];
+    dbl exp_s[DIM][DIM];
+    for (mode = 0; mode < vn->modes; mode++) {
+      compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
+      
+      if (pd->v[v_s[mode][0][0]]) {      
+        for (a = 0; a < VIM; a++) {
+          local_post[CONF_EIGEN + index] = eig_values[a];
+          local_lumped[CONF_EIGEN + index] = 1.; 
+          index++;
         } // for a
       }     
     } // Loop over modes
@@ -6340,6 +6362,7 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "Error ZZ pressure", &ERROR_ZZ_P);
   iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
   iread = look_for_post_proc(ifp, "Log Conf Stress", &LOG_CONF_MAP);
+  iread = look_for_post_proc(ifp, "Conf Eigenvalues", &CONF_EIGEN);
 
 
   /*
@@ -9031,6 +9054,47 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
   else
     {
       LOG_CONF_MAP = -1;
+    }
+
+    if (CONF_EIGEN != -1 && Num_Var_In_Type[POLYMER_STRESS11])
+    {
+      CONF_EIGEN = index_post;
+      set_nv_tkud(rd, index, 0, 0, -2, "lambda_1","[1]",
+                  "conformation tensor eigenvalue 1", FALSE);
+      index++;
+      index_post++;
+
+      set_nv_tkud(rd, index, 0, 0, -2, "lambda_2","[1]",
+                  "conformation tensor eigenvalue 2", FALSE);
+      index++;
+      index_post++;
+
+      // Loop over any additional viscoelastic modes
+      for (mode = 1; mode<MAX_MODES; mode++)
+        {
+          for (a=0; a<VIM; a++)
+            {
+              if (Num_Var_In_Type[v_s[mode][a][b]])
+                {
+                  sprintf(species_name, "lambda%d_%d", a+1, mode);
+ 	          sprintf(species_desc, "conformation tensor eigenvalue %d_%d",
+                           a+1, mode);
+                  set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]",
+                               species_desc, FALSE);
+                  index++;
+                  index_post++;
+                }
+            }
+        }
+
+      if (Num_Dim > 2)
+        {
+          EH(-1, "Conformation tensor eigenvalues not implemented for 3D");
+        }
+    }
+  else
+    {
+      CONF_EIGEN = -1;
     }
  
   /*
