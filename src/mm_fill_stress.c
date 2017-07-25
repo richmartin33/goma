@@ -2573,6 +2573,7 @@ assemble_stress_log_conf(dbl tt,
   v_g[2][1] = VELOCITY_GRADIENT32; 
   v_g[2][2] = VELOCITY_GRADIENT33; 
 
+  memset( s, 0, sizeof(double)*DIM*DIM);
   memset( exp_s, 0, sizeof(double)*DIM*DIM);
   memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
 
