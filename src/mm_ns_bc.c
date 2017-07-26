@@ -6669,7 +6669,7 @@ flow_n_dot_T_nobc(double func[DIM],
 			  var = v_g[b][c];
 			  for ( j=0; j<ei->dof[var]; j++)
 			    {
-			      d_func[p][var][j] += fv->snormal[q]*d_Pi->g[p][q][b][c][j];
+			      d_func[p][var][j] -= fv->snormal[q]*d_Pi->g[p][q][b][c][j];
 			    }
 			}
 		    }
@@ -7825,7 +7825,7 @@ stress_no_v_dot_gradS_conf(double func[MAX_MODES][6],
                                      if(lcwt != 0)
                                        {
                                          advection +=  lcwt * phi_j * (s[a][q] * (double)delta(p,b) + s[q][b] * (double)delta(a,p));
-                                         advection += ((double)delta(a,p)*(double)delta(b,q) + (double)delta(b,p)
+                                         advection += phi_j*((double)delta(a,p)*(double)delta(b,q) + (double)delta(b,p)
                                                           *(double)delta(a,q)) * (ucwt - lcwt - 1.0);
                                        }
                                     }
