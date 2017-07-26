@@ -7416,8 +7416,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   dbl gamma[DIM][DIM];     /* Shear-rate tensor based on velocity */
 
   dbl s[DIM][DIM];         /* stress tensor (log-conformation tensor) */
-  dbl exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];  // Exponential of log_conf and its derivative wrt components
-  dbl d_exp_s_inv_ds[DIM][DIM][DIM][DIM];
+  dbl exp_s[DIM][DIM];  // Exponential of log_conf and its derivative wrt components
   dbl trace = 0.0;         /* trace of the stress tensor */
   dbl s_dot[DIM][DIM];     /* stress tensor from last time step */
   dbl g[DIM][DIM];         /* velocity gradient tensor */
@@ -7438,8 +7437,6 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   dbl d_at_dT[MDE];
   dbl wlf_denom;
 
-  dbl term1=0.;
-
   // Decomposition of velocity vector
   dbl omega[DIM][DIM];
   dbl B1[DIM][DIM];
@@ -7447,13 +7444,8 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   dbl R1[DIM][DIM];
   dbl exp_s_inv[DIM][DIM];
   dbl det_exp_s, eig_tmp, R_tmp;
-
   dbl omega_dot_s[DIM][DIM];
   dbl s_dot_omega[DIM][DIM];
-  dbl d_omega_d_g[DIM][DIM][DIM][DIM];
-  dbl d_B_d_g[DIM][DIM][DIM][DIM];
-  dbl d_omega_d_s[DIM][DIM][DIM][DIM];
-  dbl d_B_d_s[DIM][DIM][DIM][DIM];
 
   /* constitutive equation parameters */
   dbl alpha;     /* This is the Geisekus mobility parameter */
@@ -7491,8 +7483,6 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   v_g[2][2] = VELOCITY_GRADIENT33;
 
   memset( exp_s, 0, sizeof(double)*DIM*DIM);
-  memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
-  memset( d_exp_s_inv_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
 
   /*
    * Load up Field variables...
@@ -7584,13 +7574,12 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
       if(VIM==2)
         {
           compute_exp_s(s, exp_s, eig_values, R1);
-          compute_d_exp_s_ds(s, exp_s, d_exp_s_ds, d_exp_s_inv_ds);
         }
 
       // Decompose velocity gradient
       // Following Fattal and Kupferman, J. Non-Newt. Fluid Mech (2004)
 
-      gradv_decomposition(s, g, B1, omega, d_B_d_g, d_B_d_s, d_omega_d_g, d_omega_d_s);
+      gradv_decomposition(s, g, B1, omega);
 
       // Solve for inverse of exp_s (2D)
       det_exp_s = exp_s[0][0] * exp_s[1][1] - exp_s[0][1] * exp_s[0][1];
@@ -7679,260 +7668,260 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
 
       /**** Assemble d_func *****/
 
-    if (af->Assemble_Jacobian)
-       {
-        for ( a=0; a<VIM; a++)
-           {
-            for ( b=0; b<VIM; b++)
-               {
-                if (a <= b) /* since the stress tensor is symmetric, only assemble the upper half */
-                  {
-                   eqn = R_s[mode][a][b];
-                   k = inv_v_s[a][b];
+    /* if (af->Assemble_Jacobian) */
+    /*    { */
+    /*     for ( a=0; a<VIM; a++) */
+    /*        { */
+    /*         for ( b=0; b<VIM; b++) */
+    /*            { */
+    /*             if (a <= b) /\* since the stress tensor is symmetric, only assemble the upper half *\/ */
+    /*               { */
+    /*                eqn = R_s[mode][a][b]; */
+    /*                k = inv_v_s[a][b]; */
 
-                   /* Sensitivities w.r.t. velocity - J_S_v */
-                   var = VELOCITY1;
-                   if (pd->v[var] )
-                     {
-                      for (p=0; p<dim; p++)
-                         {
-                          var = VELOCITY1 + p;
+    /*                /\* Sensitivities w.r.t. velocity - J_S_v *\/ */
+    /*                var = VELOCITY1; */
+    /*                if (pd->v[var] ) */
+    /*                  { */
+    /*                   for (p=0; p<dim; p++) */
+    /*                      { */
+    /*                       var = VELOCITY1 + p; */
 
-                          for ( j=0; j<ei->dof[var]; j++)
-                             {
-                              d_mup_dv_pj  = d_mup->v[p][j];
+    /*                       for ( j=0; j<ei->dof[var]; j++) */
+    /*                          { */
+    /*                           d_mup_dv_pj  = d_mup->v[p][j]; */
 
-                              /* mass term */
-                              mass = 0.;
+    /*                           /\* mass term *\/ */
+    /*                           mass = 0.; */
 
-                              /* advection term */
-                              advection = 0.;
+    /*                           /\* advection term *\/ */
+    /*                           advection = 0.; */
 
-                              /* source term */
-                              source =  0.;
-                              source *= pd->etm[eqn][(LOG2_SOURCE)];
+    /*                           /\* source term *\/ */
+    /*                           source =  0.; */
+    /*                           source *= pd->etm[eqn][(LOG2_SOURCE)]; */
 
-                              /* Load them up */
-                              d_func[mode][k][var][j] += mass + advection + source;
-                             }
-                         }
-                     } /* End of J_S_v */
+    /*                           /\* Load them up *\/ */
+    /*                           d_func[mode][k][var][j] += mass + advection + source; */
+    /*                          } */
+    /*                      } */
+    /*                  } /\* End of J_S_v *\/ */
 
-                   /* Sensitivities w.r.t. pressure - J_S_p */
-                   var = PRESSURE;
-                   if (pd->v[var] )
-                     {
-                      for ( j=0; j<ei->dof[var]; j++)
-                         {
-                          /* mass term */
-                          mass = 0.;
+    /*                /\* Sensitivities w.r.t. pressure - J_S_p *\/ */
+    /*                var = PRESSURE; */
+    /*                if (pd->v[var] ) */
+    /*                  { */
+    /*                   for ( j=0; j<ei->dof[var]; j++) */
+    /*                      { */
+    /*                       /\* mass term *\/ */
+    /*                       mass = 0.; */
 
-                          /* advection term */
-                          advection = 0.;
+    /*                       /\* advection term *\/ */
+    /*                       advection = 0.; */
 
-                          /* source term */
-                          source =  0.0;
-                          source *= pd->etm[eqn][(LOG2_SOURCE)];
+    /*                       /\* source term *\/ */
+    /*                       source =  0.0; */
+    /*                       source *= pd->etm[eqn][(LOG2_SOURCE)]; */
 
-                          /* Load them up */
-                          d_func[mode][k][var][j] += mass + advection + source;
-                         }
-                     } /* End of J_S_p */
-
-
-                   /* Sensitivities w.r.t. temperature - J_S_T */
-                   var = TEMPERATURE;
-                   if (pd->v[var] )
-                     {
-                      for ( j=0; j<ei->dof[var]; j++)
-                         {
-
-                          /* mass term */
-                          mass = 0.;
-                          if ( pd->TimeIntegration != STEADY )
-                            {
-                             mass = s_dot[a][b] * d_at_dT[j];
-                             mass *= pd->etm[eqn][(LOG2_MASS)];
-                            }
-
-                          /* advection term */
-                          advection = 0.;
-                          if (lambda != 0.)
-                            {
-                             advection -= omega_dot_s[a][b] - s_dot_omega[a][b] + 2.0*B1[a][b];
-                             advection *= d_at_dT[j];
-                             advection *= pd->etm[eqn][(LOG2_ADVECTION)];
-                            }
-
-                          /* source term */
-                          source = 0.;
-                          source *= pd->etm[eqn][(LOG2_SOURCE)];
-
-                          /* Load them up */
-                          d_func[mode][k][var][j] += mass + advection + source;
-                         }
-                     } /* End of J_S_T */
+    /*                       /\* Load them up *\/ */
+    /*                       d_func[mode][k][var][j] += mass + advection + source; */
+    /*                      } */
+    /*                  } /\* End of J_S_p *\/ */
 
 
-                   /* Sensitivities w.r.t. mesh displacement - J_S_d */
-                   for ( p=0; p<dim; p++)
-                      {
-                       var = MESH_DISPLACEMENT1 + p;
-                       if ( pd->v[var] )
-                         {
+    /*                /\* Sensitivities w.r.t. temperature - J_S_T *\/ */
+    /*                var = TEMPERATURE; */
+    /*                if (pd->v[var] ) */
+    /*                  { */
+    /*                   for ( j=0; j<ei->dof[var]; j++) */
+    /*                      { */
 
-                          for ( j=0; j<ei->dof[var]; j++)
-                             {
+    /*                       /\* mass term *\/ */
+    /*                       mass = 0.; */
+    /*                       if ( pd->TimeIntegration != STEADY ) */
+    /*                         { */
+    /*                          mass = s_dot[a][b] * d_at_dT[j]; */
+    /*                          mass *= pd->etm[eqn][(LOG2_MASS)]; */
+    /*                         } */
 
-                              /* mass term */
-                              mass = 0.0;
+    /*                       /\* advection term *\/ */
+    /*                       advection = 0.; */
+    /*                       if (lambda != 0.) */
+    /*                         { */
+    /*                          advection -= omega_dot_s[a][b] - s_dot_omega[a][b] + 2.0*B1[a][b]; */
+    /*                          advection *= d_at_dT[j]; */
+    /*                          advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+    /*                         } */
 
-                              /* advection term */
-                              advection = 0.0;
+    /*                       /\* source term *\/ */
+    /*                       source = 0.; */
+    /*                       source *= pd->etm[eqn][(LOG2_SOURCE)]; */
 
-                              /* source term */
-                              source = 0.0;
-                              source *= pd->etm[eqn][(LOG2_SOURCE)];
-
-
-                              /* Load them up */
-                              d_func[mode][k][var][j] += mass + advection + source;
-                             }
-                         }
-                      } /* End of J_S_d */
-
-                   /* Sensitivities w.r.t. mass fraction - J_S_c */
-                   var = MASS_FRACTION;
-                   if ( pd->v[var] )
-                     {
-                      for ( j=0; j<ei->dof[var]; j++)
-                         {
-                          for ( w=0; w<pd->Num_Species_Eqn; w++)
-                             {
-
-                              /* mass term */
-                              mass = 0.0;
-
-                              /* advection term */
-                              advection = 0.0;
-
-                              /* source term */
-                              source = 0.0;
-                              source *= pd->etm[eqn][(LOG2_SOURCE)];
+    /*                       /\* Load them up *\/ */
+    /*                       d_func[mode][k][var][j] += mass + advection + source; */
+    /*                      } */
+    /*                  } /\* End of J_S_T *\/ */
 
 
-                              /* Load them up */
-                              d_func[mode][k][MAX_VARIABLE_TYPES + w][j] += mass + advection + source;
-                             }
-                         }
-                     } /* End of J_S_c */
-                   /* Sensitivities w.r.t. continuous velocity gradient - J_S_G */
-                   var = VELOCITY_GRADIENT11;
-                   if (pd->v[var] )
-                     {
-                      for ( p=0; p<VIM; p++)
-                         {
-                          for ( q=0; q<VIM; q++)
-                             {
-                              var =  v_g[p][q];
+    /*                /\* Sensitivities w.r.t. mesh displacement - J_S_d *\/ */
+    /*                for ( p=0; p<dim; p++) */
+    /*                   { */
+    /*                    var = MESH_DISPLACEMENT1 + p; */
+    /*                    if ( pd->v[var] ) */
+    /*                      { */
 
-                              for ( j=0; j<ei->dof[var]; j++)
-                                 {
-                                  phi_j = bf[var]->phi[j];
+    /*                       for ( j=0; j<ei->dof[var]; j++) */
+    /*                          { */
 
-                                  /* mass term */
-                                  mass = 0.0;
+    /*                           /\* mass term *\/ */
+    /*                           mass = 0.0; */
 
-                                  /* advection term */
-                                  advection = 0.0;
-                                  if (lambda != 0.)
-                                    {
-			             // Switching p and q since derivatives evaluated according to gt
- 		                     for (k=0; k<VIM; k++)
-			               {
- 				         advection += -d_omega_d_g[a][k][q][p]*s[k][b] + s[a][k]*d_omega_d_g[k][b][q][p];
-				       }
-			             advection -= 2.0 * d_B_d_g[a][b][q][p];
-                                     advection *= phi_j * at;
-                                    }
-                                  advection *= pd->etm[eqn][(LOG2_ADVECTION)];
+    /*                           /\* advection term *\/ */
+    /*                           advection = 0.0; */
 
-                                  /* source term */
-                                  source  = 0.;
-                                  source *= pd->etm[eqn][(LOG2_SOURCE)];
+    /*                           /\* source term *\/ */
+    /*                           source = 0.0; */
+    /*                           source *= pd->etm[eqn][(LOG2_SOURCE)]; */
 
-                                  /* Load them up */
-                                  d_func[mode][k][var][j] += mass + advection + source;
-                                 }
-                             }
-                         }
-                     } /* End of J_S_G */
 
-                   /* Sensitivities w.r.t. log-conformation tensor - J_S_S */
-                   var = POLYMER_STRESS11;
-                   if (pd->v[var] )
-                     {
-                      for ( p=0; p<VIM; p++)
-                         {
-                          for ( q=0; q<VIM; q++)
-                             {
-                                 var =  v_s[mode][p][q];
+    /*                           /\* Load them up *\/ */
+    /*                           d_func[mode][k][var][j] += mass + advection + source; */
+    /*                          } */
+    /*                      } */
+    /*                   } /\* End of J_S_d *\/ */
 
-                                 for ( j=0; j<ei->dof[var]; j++)
-                                    {
-                                     phi_j = bf[var]->phi[j];
+    /*                /\* Sensitivities w.r.t. mass fraction - J_S_c *\/ */
+    /*                var = MASS_FRACTION; */
+    /*                if ( pd->v[var] ) */
+    /*                  { */
+    /*                   for ( j=0; j<ei->dof[var]; j++) */
+    /*                      { */
+    /*                       for ( w=0; w<pd->Num_Species_Eqn; w++) */
+    /*                          { */
 
-                                     /* mass term */
-                                     mass = 0.0;
-                                     if ( pd->TimeIntegration != STEADY )
-                                       {
-			                mass = (1.+2.*tt) * phi_j/dt * (double)delta(a,p) * (double)delta(b,q);
-                                        mass *= at;
-                                       }
-                                     mass *= pd->etm[eqn][(LOG2_MASS)];
+    /*                           /\* mass term *\/ */
+    /*                           mass = 0.0; */
 
-                                     /* advection term */
-                                     advection = 0.0;
-			             advection += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p)*omega[q][b];
-                                     if (p != q)
-                                       {
-			                 advection += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q)*omega[p][b];
-			               }
-                                     for (k=0; k<VIM; k++)
-                                       {
-                                         advection += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q];
-                                       }
-                                     advection -= 2.0 * d_B_d_s[a][b][p][q];
-                                     advection *=  phi_j*at;
-                                     advection *= pd->etm[eqn][(LOG2_ADVECTION)];
+    /*                           /\* advection term *\/ */
+    /*                           advection = 0.0; */
 
-                                     /* source term */
-                                     source = -Z * phi_j * d_exp_s_inv_ds[a][b][p][q] / lambda; 
-                                     if( eps != 0.0 && a==b )  
-		                       {
-                                         source_a = ((double)delta(a,b) - exp_s_inv[a][b])/lambda;
-                                         source_a *= eps * Z * d_exp_s_ds[a][b][p][q] * phi_j;
-                                         source += source_a;
- 			               }
-                                     if (alpha != 0.)
-                                       {
-                                        source1 = 0.;
-                                        source1 += phi_j * (d_exp_s_ds[a][b][p][q] + d_exp_s_inv_ds[a][b][p][q]);
-                                        source1 *= alpha/lambda;
-                                        source += source1;
-                                       }
-                                     source *= pd->etm[eqn][(LOG2_SOURCE)];
+    /*                           /\* source term *\/ */
+    /*                           source = 0.0; */
+    /*                           source *= pd->etm[eqn][(LOG2_SOURCE)]; */
 
-                                     /* Load them up */
-                                     d_func[mode][k][var][j] += mass + advection + source;
-                                    }
-                             }
-                         }
-                     } /* End of J_S_S */
-                  } /* End of if a == b */
-               } /* End of loop over dimension "b" */
-           } /* End of loop over dimension "a" */
-       } /*  end of if Assemble_Jacobian  */
+
+    /*                           /\* Load them up *\/ */
+    /*                           d_func[mode][k][MAX_VARIABLE_TYPES + w][j] += mass + advection + source; */
+    /*                          } */
+    /*                      } */
+    /*                  } /\* End of J_S_c *\/ */
+    /*                /\* Sensitivities w.r.t. continuous velocity gradient - J_S_G *\/ */
+    /*                var = VELOCITY_GRADIENT11; */
+    /*                if (pd->v[var] ) */
+    /*                  { */
+    /*                   for ( p=0; p<VIM; p++) */
+    /*                      { */
+    /*                       for ( q=0; q<VIM; q++) */
+    /*                          { */
+    /*                           var =  v_g[p][q]; */
+
+    /*                           for ( j=0; j<ei->dof[var]; j++) */
+    /*                              { */
+    /*                               phi_j = bf[var]->phi[j]; */
+
+    /*                               /\* mass term *\/ */
+    /*                               mass = 0.0; */
+
+    /*                               /\* advection term *\/ */
+    /*                               advection = 0.0; */
+    /*                               if (lambda != 0.) */
+    /*                                 { */
+    /* 			             // Switching p and q since derivatives evaluated according to gt */
+    /* 		                     for (k=0; k<VIM; k++) */
+    /* 			               { */
+    /* 				         advection += -d_omega_d_g[a][k][q][p]*s[k][b] + s[a][k]*d_omega_d_g[k][b][q][p]; */
+    /* 				       } */
+    /* 			             advection -= 2.0 * d_B_d_g[a][b][q][p]; */
+    /*                                  advection *= phi_j * at; */
+    /*                                 } */
+    /*                               advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+
+    /*                               /\* source term *\/ */
+    /*                               source  = 0.; */
+    /*                               source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+
+    /*                               /\* Load them up *\/ */
+    /*                               d_func[mode][k][var][j] += mass + advection + source; */
+    /*                              } */
+    /*                          } */
+    /*                      } */
+    /*                  } /\* End of J_S_G *\/ */
+
+    /*                /\* Sensitivities w.r.t. log-conformation tensor - J_S_S *\/ */
+    /*                var = POLYMER_STRESS11; */
+    /*                if (pd->v[var] ) */
+    /*                  { */
+    /*                   for ( p=0; p<VIM; p++) */
+    /*                      { */
+    /*                       for ( q=0; q<VIM; q++) */
+    /*                          { */
+    /*                              var =  v_s[mode][p][q]; */
+
+    /*                              for ( j=0; j<ei->dof[var]; j++) */
+    /*                                 { */
+    /*                                  phi_j = bf[var]->phi[j]; */
+
+    /*                                  /\* mass term *\/ */
+    /*                                  mass = 0.0; */
+    /*                                  if ( pd->TimeIntegration != STEADY ) */
+    /*                                    { */
+    /* 			                mass = (1.+2.*tt) * phi_j/dt * (double)delta(a,p) * (double)delta(b,q); */
+    /*                                     mass *= at; */
+    /*                                    } */
+    /*                                  mass *= pd->etm[eqn][(LOG2_MASS)]; */
+
+    /*                                  /\* advection term *\/ */
+    /*                                  advection = 0.0; */
+    /* 			             advection += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p)*omega[q][b]; */
+    /*                                  if (p != q) */
+    /*                                    { */
+    /* 			                 advection += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q)*omega[p][b]; */
+    /* 			               } */
+    /*                                  for (k=0; k<VIM; k++) */
+    /*                                    { */
+    /*                                      advection += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q]; */
+    /*                                    } */
+    /*                                  advection -= 2.0 * d_B_d_s[a][b][p][q]; */
+    /*                                  advection *=  phi_j*at; */
+    /*                                  advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+
+    /*                                  /\* source term *\/ */
+    /*                                  source = -Z * phi_j * d_exp_s_inv_ds[a][b][p][q] / lambda;  */
+    /*                                  if( eps != 0.0 && a==b )   */
+    /* 		                       { */
+    /*                                      source_a = ((double)delta(a,b) - exp_s_inv[a][b])/lambda; */
+    /*                                      source_a *= eps * Z * d_exp_s_ds[a][b][p][q] * phi_j; */
+    /*                                      source += source_a; */
+    /* 			               } */
+    /*                                  if (alpha != 0.) */
+    /*                                    { */
+    /*                                     source1 = 0.; */
+    /*                                     source1 += phi_j * (d_exp_s_ds[a][b][p][q] + d_exp_s_inv_ds[a][b][p][q]); */
+    /*                                     source1 *= alpha/lambda; */
+    /*                                     source += source1; */
+    /*                                    } */
+    /*                                  source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+
+    /*                                  /\* Load them up *\/ */
+    /*                                  d_func[mode][k][var][j] += mass + advection + source; */
+    /*                                 } */
+    /*                          } */
+    /*                      } */
+    /*                  } /\* End of J_S_S *\/ */
+    /*               } /\* End of if a == b *\/ */
+    /*            } /\* End of loop over dimension "b" *\/ */
+    /*        } /\* End of loop over dimension "a" *\/ */
+    /*    } /\*  end of if Assemble_Jacobian  *\/ */
      } /* End of loop over modes */
 }/* END of routine stress_no_v_dot_gradS                                    */
 /*****************************************************************************/

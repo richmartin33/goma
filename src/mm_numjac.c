@@ -423,20 +423,21 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
           for (mode=0; mode < vn->modes; mode++)
           {
 	        /* Only for stress terms */
-	  if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
-	      (idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33)) continue;
+	  //if ((idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) &&
+	  //    (idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33)) continue;
 	  //if (idv[i][0] < POLYMER_STRESS11 || idv[i][0] > POLYMER_STRESS33) continue;
-	  //if (idv[i][0] < v_s[mode][0][0] || idv[i][0] > v_s[mode][2][2]) continue;
+	  if (idv[i][0] >= v_s[mode][0][0] && idv[i][0] <= v_s[mode][2][2])
+            {
+              if (Inter_Mask[var_i][var_j]) {
 
-          if (Inter_Mask[var_i][var_j]) {
-
-	    int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
-	    if (ja == -1) {
-	      sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j, idv[i][0], idv[j][0]);
-	      EH(ja, errstring);
-	    }
-	    nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
-	  }
+	        int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
+	        if (ja == -1) {
+	          sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j, idv[i][0], idv[j][0]);
+	          EH(ja, errstring);
+	        }
+	      nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
+	     }
+            }
           } // Loop over modes
 
         }

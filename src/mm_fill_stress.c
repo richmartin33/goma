@@ -2472,8 +2472,7 @@ assemble_stress_log_conf(dbl tt,
   int R_s[MAX_MODES][DIM][DIM]; 
   int v_s[MAX_MODES][DIM][DIM]; 
   int v_g[DIM][DIM]; 
-  dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];
-  dbl d_exp_s_inv_ds[DIM][DIM][DIM][DIM];
+  dbl s[DIM][DIM], exp_s[DIM][DIM];
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
   dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM];
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
@@ -2484,16 +2483,6 @@ assemble_stress_log_conf(dbl tt,
 
   //Tensors for dot products
   dbl s_dot_s[DIM][DIM]; 
-  dbl s_dot_g[DIM][DIM];
-  dbl g_dot_s[DIM][DIM];
-  dbl s_dot_gt[DIM][DIM];
-  dbl gt_dot_s[DIM][DIM];
-  dbl exp_s_dot_exp_s[DIM][DIM]; 
-  dbl exp_s_dot_g[DIM][DIM];
-  dbl gt_dot_exp_s[DIM][DIM];
-  dbl g_dot_exp_s[DIM][DIM];
-  dbl exp_s_dot_gt[DIM][DIM];
-
   dbl omega_dot_s[DIM][DIM];
   dbl s_dot_omega[DIM][DIM];
 
@@ -2520,10 +2509,6 @@ assemble_stress_log_conf(dbl tt,
   dbl eig_values[DIM];
   dbl R1[DIM][DIM];
   dbl R1_T[DIM][DIM];
-  dbl d_B_d_g[DIM][DIM][DIM][DIM];
-  dbl d_B_d_s[DIM][DIM][DIM][DIM];
-  dbl d_omega_d_g[DIM][DIM][DIM][DIM];
-  dbl d_omega_d_s[DIM][DIM][DIM][DIM];
 
   dbl exp_s_inv[DIM][DIM];
   dbl det_exp_s, eig_tmp, R_tmp;
@@ -2575,7 +2560,6 @@ assemble_stress_log_conf(dbl tt,
 
   memset( s, 0, sizeof(double)*DIM*DIM);
   memset( exp_s, 0, sizeof(double)*DIM*DIM);
-  memset( d_exp_s_ds, 0, sizeof(double)*DIM*DIM*DIM*DIM);
 
   
   //Load up field variables
@@ -2714,13 +2698,12 @@ assemble_stress_log_conf(dbl tt,
       if(VIM==2)
 	{
           compute_exp_s(s, exp_s, eig_values, R1);
-          compute_d_exp_s_ds(s, exp_s, d_exp_s_ds, d_exp_s_inv_ds);
 	}
 
       // Decompose velocity gradient
       // Following Fattal and Kupferman, J. Non-Newt. Fluid Mech (2004)
 
-      gradv_decomposition(s, g, B1, omega, d_B_d_g, d_B_d_s, d_omega_d_g, d_omega_d_s);
+      gradv_decomposition(s, g, B1, omega);
 
       // Solve for inverse of exp_s (2D)
       det_exp_s = exp_s[0][0] * exp_s[1][1] - exp_s[0][1] * exp_s[0][1];
@@ -2837,587 +2820,587 @@ assemble_stress_log_conf(dbl tt,
        * Jacobian terms...
        */
       
-      if ( af->Assemble_Jacobian )
-	{
-	  dbl R_source, R_advection; /* Places to put the raw residual portions 
-					        instead of constantly recalcing them */
-	  for ( a=0; a<VIM; a++)
-	    {
-	      for ( b=0; b<VIM; b++)
-		{
-		  if(a <= b) /* since the stress tensor is symmetric, only assemble the upper half */ 
-		    {
-		      eqn = R_s[mode][a][b];
-		      peqn = upd->ep[eqn];
+      /* if ( af->Assemble_Jacobian ) */
+      /* 	{ */
+      /* 	  dbl R_source, R_advection; /\* Places to put the raw residual portions  */
+      /* 					        instead of constantly recalcing them *\/ */
+      /* 	  for ( a=0; a<VIM; a++) */
+      /* 	    { */
+      /* 	      for ( b=0; b<VIM; b++) */
+      /* 		{ */
+      /* 		  if(a <= b) /\* since the stress tensor is symmetric, only assemble the upper half *\/  */
+      /* 		    { */
+      /* 		      eqn = R_s[mode][a][b]; */
+      /* 		      peqn = upd->ep[eqn]; */
 
-		      R_advection =  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
-		      R_advection += -omega_dot_s[a][b] + s_dot_omega[a][b] - 2.0*B1[a][b]; 
+      /* 		      R_advection =  v_dot_del_s[a][b]  -  x_dot_del_s[a][b]; */
+      /* 		      R_advection += -omega_dot_s[a][b] + s_dot_omega[a][b] - 2.0*B1[a][b];  */
 
-		      R_source =   ((double)delta(a,b) - exp_s_inv[a][b]) * Z / lambda;
+      /* 		      R_source =   ((double)delta(a,b) - exp_s_inv[a][b]) * Z / lambda; */
 			      
-		      if(alpha != 0.)
-		        {
-		          R_source += alpha/lambda*(exp_s[a][b] - 2.0 * (double)delta(a,b) + exp_s_inv[a][b]);
-		        }
+      /* 		      if(alpha != 0.) */
+      /* 		        { */
+      /* 		          R_source += alpha/lambda*(exp_s[a][b] - 2.0 * (double)delta(a,b) + exp_s_inv[a][b]); */
+      /* 		        } */
 		      
-		      for ( i=0; i<ei->dof[eqn]; i++)
-			{
+      /* 		      for ( i=0; i<ei->dof[eqn]; i++) */
+      /* 			{ */
 			  
-			  wt_func = bf[eqn]->phi[i];
-			  /* add Petrov-Galerkin terms as necessary */
-			  if(supg!=0.)
-			    {
-			      for(w=0; w<dim; w++)
-				{
-				  wt_func += supg * h_elem*v[w]*bf[eqn]->grad_phi[i] [w];
-				}
-			    }
+      /* 			  wt_func = bf[eqn]->phi[i]; */
+      /* 			  /\* add Petrov-Galerkin terms as necessary *\/ */
+      /* 			  if(supg!=0.) */
+      /* 			    { */
+      /* 			      for(w=0; w<dim; w++) */
+      /* 				{ */
+      /* 				  wt_func += supg * h_elem*v[w]*bf[eqn]->grad_phi[i] [w]; */
+      /* 				} */
+      /* 			    } */
 			  
 			  
-			  /*
-			   * Set up some preliminaries that are needed for the (a,i)
-			   * equation for bunches of (b,j) column variables...
-			   */
+      /* 			  /\* */
+      /* 			   * Set up some preliminaries that are needed for the (a,i) */
+      /* 			   * equation for bunches of (b,j) column variables... */
+      /* 			   *\/ */
 			  
-			  /* 
-			   * J_S_T
-			   */
+      /* 			  /\*  */
+      /* 			   * J_S_T */
+      /* 			   *\/ */
 			  
-			  var = TEMPERATURE;
-			  if ( pd->v[var] )
-			    {
-			      pvar = upd->vp[var];
-			      for ( j=0; j<ei->dof[var]; j++)
-				{
-				  phi_j = bf[var]->phi[j];
+      /* 			  var = TEMPERATURE; */
+      /* 			  if ( pd->v[var] ) */
+      /* 			    { */
+      /* 			      pvar = upd->vp[var]; */
+      /* 			      for ( j=0; j<ei->dof[var]; j++) */
+      /* 				{ */
+      /* 				  phi_j = bf[var]->phi[j]; */
 				  
-			   	   mass = 0.;
+      /* 			   	   mass = 0.; */
 			  
-			  	   if ( pd->TimeIntegration != STEADY )
-			    	     {
-			      	       if ( pd->e[eqn] & T_MASS )
-					 {
-				  	  mass = s_dot[a][b];
-				  	  mass *= wt_func * d_at_dT[j] * det_J * wt;
-				  	  mass *= h3;
-				  	  mass *= pd->etm[eqn][(LOG2_MASS)];
-					 }
-			    	     }
+      /* 			  	   if ( pd->TimeIntegration != STEADY ) */
+      /* 			    	     { */
+      /* 			      	       if ( pd->e[eqn] & T_MASS ) */
+      /* 					 { */
+      /* 				  	  mass = s_dot[a][b]; */
+      /* 				  	  mass *= wt_func * d_at_dT[j] * det_J * wt; */
+      /* 				  	  mass *= h3; */
+      /* 				  	  mass *= pd->etm[eqn][(LOG2_MASS)]; */
+      /* 					 } */
+      /* 			    	     } */
 			  
-			  	   advection = 0.;
-			  	   if ( pd->e[eqn] & T_ADVECTION )
- 			    	     {
-			      	      if(lambda != 0.)
-					{
+      /* 			  	   advection = 0.; */
+      /* 			  	   if ( pd->e[eqn] & T_ADVECTION ) */
+      /* 			    	     { */
+      /* 			      	      if(lambda != 0.) */
+      /* 					{ */
 				  
-				  	advection +=  v_dot_del_s[a][b]  -  x_dot_del_s[a][b];
-				  	advection += -omega_dot_s[a][b] - s_dot_omega[a][b] - 2.0*B1[a][b];
+      /* 				  	advection +=  v_dot_del_s[a][b]  -  x_dot_del_s[a][b]; */
+      /* 				  	advection += -omega_dot_s[a][b] - s_dot_omega[a][b] - 2.0*B1[a][b]; */
 
-				  	advection *= wt_func * d_at_dT[j] *det_J * wt * h3;
-				  	advection *= pd->etm[eqn][(LOG2_ADVECTION)];
-					}     
-			    	     }
+      /* 				  	advection *= wt_func * d_at_dT[j] *det_J * wt * h3; */
+      /* 				  	advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 					}      */
+      /* 			    	     } */
 			  
-				  source    = 0.;
-				  if ( pd->e[eqn] & T_SOURCE )
-				    {
-				      source *= pd->etm[eqn][(LOG2_SOURCE)];
-				    }
+      /* 				  source    = 0.; */
+      /* 				  if ( pd->e[eqn] & T_SOURCE ) */
+      /* 				    { */
+      /* 				      source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+      /* 				    } */
 				  
-				  lec->J[peqn][pvar][i][j] +=
-				    mass + advection + source;
-				}
-			    }
+      /* 				  lec->J[peqn][pvar][i][j] += */
+      /* 				    mass + advection + source; */
+      /* 				} */
+      /* 			    } */
 			  
-			  /*
-			   * J_S_v
-			   */
-			  for ( p=0; p<dim; p++)
-			    {
-			      var = VELOCITY1+p;
-			      if ( pd->v[var] )
-				{
-				  pvar = upd->vp[var];
-				  for ( j=0; j<ei->dof[var]; j++)
-				    {
-				      phi_j = bf[var]->phi[j];
+      /* 			  /\* */
+      /* 			   * J_S_v */
+      /* 			   *\/ */
+      /* 			  for ( p=0; p<dim; p++) */
+      /* 			    { */
+      /* 			      var = VELOCITY1+p; */
+      /* 			      if ( pd->v[var] ) */
+      /* 				{ */
+      /* 				  pvar = upd->vp[var]; */
+      /* 				  for ( j=0; j<ei->dof[var]; j++) */
+      /* 				    { */
+      /* 				      phi_j = bf[var]->phi[j]; */
 				      
-				      mass = 0.;
+      /* 				      mass = 0.; */
 
 				      
-				      if ( pd->TimeIntegration != STEADY )
-					{
-					  if ( pd->e[eqn] & T_MASS )
-					    {
-					      if(supg!=0.)
-						{
-						  mass = supg * h_elem*phi_j*bf[eqn]->grad_phi[i][p];
+      /* 				      if ( pd->TimeIntegration != STEADY ) */
+      /* 					{ */
+      /* 					  if ( pd->e[eqn] & T_MASS ) */
+      /* 					    { */
+      /* 					      if(supg!=0.) */
+      /* 						{ */
+      /* 						  mass = supg * h_elem*phi_j*bf[eqn]->grad_phi[i][p]; */
 						  
-						  for(w=0;w<dim;w++)
-						    {
-						      mass += supg * vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4.
-							*v[w]*bf[eqn]->grad_phi[i] [w];
-						    }
+      /* 						  for(w=0;w<dim;w++) */
+      /* 						    { */
+      /* 						      mass += supg * vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4. */
+      /* 							*v[w]*bf[eqn]->grad_phi[i] [w]; */
+      /* 						    } */
 						  
-						  mass *=  s_dot[a][b];
-						}
+      /* 						  mass *=  s_dot[a][b]; */
+      /* 						} */
 					      
-					      mass *= pd->etm[eqn][(LOG2_MASS)] * at * det_J * wt * h3;
-					    }
+      /* 					      mass *= pd->etm[eqn][(LOG2_MASS)] * at * det_J * wt * h3; */
+      /* 					    } */
 					  
-					}
+      /* 					} */
 				      
-				      advection = 0.;
+      /* 				      advection = 0.; */
 				      
-				      if ( pd->e[eqn] & T_ADVECTION )
-					{
-					  if(lambda != 0.)
-					    {
-					      advection_a = phi_j * 
-						(grad_s[p][a][b]);
+      /* 				      if ( pd->e[eqn] & T_ADVECTION ) */
+      /* 					{ */
+      /* 					  if(lambda != 0.) */
+      /* 					    { */
+      /* 					      advection_a = phi_j *  */
+      /* 						(grad_s[p][a][b]); */
 					      
-					      advection_a *=  wt_func;
+      /* 					      advection_a *=  wt_func; */
 					      
-					      advection_b = 0.;
-					      /* Petrov-Galerkin term */
-					      if(supg !=0.)
-						{
+      /* 					      advection_b = 0.; */
+      /* 					      /\* Petrov-Galerkin term *\/ */
+      /* 					      if(supg !=0.) */
+      /* 						{ */
 						 
-						  advection_b =  supg * h_elem*phi_j*bf[eqn]->grad_phi[i][p];
-						  for( w =0; w<dim; w++ )
-						    {
-						      advection_b += supg*vcent[p]*h[p]*dvc_dnode[p][j]*h_elem_inv/4.
-							*v[w]*bf[eqn]->grad_phi[i] [w];
-						    }
+      /* 						  advection_b =  supg * h_elem*phi_j*bf[eqn]->grad_phi[i][p]; */
+      /* 						  for( w =0; w<dim; w++ ) */
+      /* 						    { */
+      /* 						      advection_b += supg*vcent[p]*h[p]*dvc_dnode[p][j]*h_elem_inv/4. */
+      /* 							*v[w]*bf[eqn]->grad_phi[i] [w]; */
+      /* 						    } */
 						  
-						  advection_b *= R_advection;
-						}
+      /* 						  advection_b *= R_advection; */
+      /* 						} */
 					      
-					      advection = advection_a +  advection_b;
-					      advection *= at * det_J * wt *h3;
-					      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
-					    }
-					}
+      /* 					      advection = advection_a +  advection_b; */
+      /* 					      advection *= at * det_J * wt *h3; */
+      /* 					      advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 					    } */
+      /* 					} */
 				      
-				      diffusion = 0.;
+      /* 				      diffusion = 0.; */
 				      
-				      if ( pd->e[eqn] & T_DIFFUSION )
-					{
-					  /* add SU term in here when appropriate */
+      /* 				      if ( pd->e[eqn] & T_DIFFUSION ) */
+      /* 					{ */
+      /* 					  /\* add SU term in here when appropriate *\/ */
 					  
-					  diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
-					}
+      /* 					  diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)]; */
+      /* 					} */
 				      
-				      source    = 0.;
+      /* 				      source    = 0.; */
 				      
-				      if ( pd->e[eqn] & T_SOURCE )
-					{
-					  source_b = 0.;
-					  if(supg != 0.)
-					    {
-					      source_b = supg * h_elem* phi_j*bf[eqn]->grad_phi[i][p];
+      /* 				      if ( pd->e[eqn] & T_SOURCE ) */
+      /* 					{ */
+      /* 					  source_b = 0.; */
+      /* 					  if(supg != 0.) */
+      /* 					    { */
+      /* 					      source_b = supg * h_elem* phi_j*bf[eqn]->grad_phi[i][p]; */
 					      
-					      for(w=0;w<dim;w++)
-						{
-						  source_b += supg*vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4.
-						    *v[w]*bf[eqn]->grad_phi[i] [w];
-						}
+      /* 					      for(w=0;w<dim;w++) */
+      /* 						{ */
+      /* 						  source_b += supg*vcent[p]*dvc_dnode[p][j]*h[p]*h_elem_inv/4. */
+      /* 						    *v[w]*bf[eqn]->grad_phi[i] [w]; */
+      /* 						} */
 					      
-					      source_b *= R_source;
-					    }
+      /* 					      source_b *= R_source; */
+      /* 					    } */
 					  
-					  source = source_a + source_b + source_c;
-					  source *=  det_J * wt * h3;
-					  source *= pd->etm[eqn][(LOG2_SOURCE)];
-					}
+      /* 					  source = source_a + source_b + source_c; */
+      /* 					  source *=  det_J * wt * h3; */
+      /* 					  source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+      /* 					} */
 				  
-				      lec->J[peqn][pvar][i][j] +=
-					mass + advection + diffusion + source;
-				    }
-				}
-			    }
+      /* 				      lec->J[peqn][pvar][i][j] += */
+      /* 					mass + advection + diffusion + source; */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
 			  
-			  /*
-			   * J_S_c
-			   */
-			  var = MASS_FRACTION;
-			  if ( pd->v[var] )
-			    {
-			      for ( j=0; j<ei->dof[var]; j++)
-				{
-				  phi_j = bf[var]->phi[j];
+      /* 			  /\* */
+      /* 			   * J_S_c */
+      /* 			   *\/ */
+      /* 			  var = MASS_FRACTION; */
+      /* 			  if ( pd->v[var] ) */
+      /* 			    { */
+      /* 			      for ( j=0; j<ei->dof[var]; j++) */
+      /* 				{ */
+      /* 				  phi_j = bf[var]->phi[j]; */
 				  
-				  for ( w=0; w<pd->Num_Species_Eqn; w++)
-				    {
+      /* 				  for ( w=0; w<pd->Num_Species_Eqn; w++) */
+      /* 				    { */
 				      
-				      source    = 0.;
+      /* 				      source    = 0.; */
 			  
-				      if ( pd->e[eqn] & T_SOURCE )
-					{
-					  source *= pd->etm[eqn][(LOG2_SOURCE)];
-					}
+      /* 				      if ( pd->e[eqn] & T_SOURCE ) */
+      /* 					{ */
+      /* 					  source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+      /* 					} */
 				      
-				      if ( w > 1 )
-					{
-					  EH(-1, "Need more arrays for each species.");
-					}
+      /* 				      if ( w > 1 ) */
+      /* 					{ */
+      /* 					  EH(-1, "Need more arrays for each species."); */
+      /* 					} */
 				      
-				      lec->J[peqn][MAX_PROB_VAR + w][i][j] +=
-					source;
-				    }
-				}
-			    }
+      /* 				      lec->J[peqn][MAX_PROB_VAR + w][i][j] += */
+      /* 					source; */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
 			  
-			  /*
-			   * J_S_P
-			   */
-			  var = PRESSURE;
-			  if ( pd->v[var] )
-			    {
-			      pvar = upd->vp[var];
-			      for ( j=0; j<ei->dof[var]; j++)
-				{
-				  phi_j = bf[var]->phi[j];
+      /* 			  /\* */
+      /* 			   * J_S_P */
+      /* 			   *\/ */
+      /* 			  var = PRESSURE; */
+      /* 			  if ( pd->v[var] ) */
+      /* 			    { */
+      /* 			      pvar = upd->vp[var]; */
+      /* 			      for ( j=0; j<ei->dof[var]; j++) */
+      /* 				{ */
+      /* 				  phi_j = bf[var]->phi[j]; */
 				  
-				  source    = 0.;
-				  if ( pd->e[eqn] & T_SOURCE )
-				    {
-				      source *= pd->etm[eqn][(LOG2_SOURCE)];
-				    }
+      /* 				  source    = 0.; */
+      /* 				  if ( pd->e[eqn] & T_SOURCE ) */
+      /* 				    { */
+      /* 				      source *= pd->etm[eqn][(LOG2_SOURCE)]; */
+      /* 				    } */
 				  
-				  lec->J[peqn][pvar][i][j] +=
-				    source;
-				}		      
-			    }
+      /* 				  lec->J[peqn][pvar][i][j] += */
+      /* 				    source; */
+      /* 				}		       */
+      /* 			    } */
 			  
-			  /*
-			   * J_S_d
-			   */
-			  for ( p=0; p<dim; p++)
-			    {
-			      var = MESH_DISPLACEMENT1+p;
-			      if ( pd->v[var] )
-				{
-				  pvar = upd->vp[var];
-				  for ( j=0; j<ei->dof[var]; j++)
-				    {
-				      phi_j = bf[var]->phi[j];
-				      d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j];
-				      dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j];
-				      if(supg!=0.)
-					{
-					  h_elem_deriv = 0.;
-					  for( q=0; q<dim; q++ )
-					    {
-					      h_elem_deriv += 
-						hh[q][p]*vcent[q]*vcent[q]*dh_dxnode[q][j]*h_elem_inv/4.;
-					    } 
-					}
+      /* 			  /\* */
+      /* 			   * J_S_d */
+      /* 			   *\/ */
+      /* 			  for ( p=0; p<dim; p++) */
+      /* 			    { */
+      /* 			      var = MESH_DISPLACEMENT1+p; */
+      /* 			      if ( pd->v[var] ) */
+      /* 				{ */
+      /* 				  pvar = upd->vp[var]; */
+      /* 				  for ( j=0; j<ei->dof[var]; j++) */
+      /* 				    { */
+      /* 				      phi_j = bf[var]->phi[j]; */
+      /* 				      d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j]; */
+      /* 				      dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j]; */
+      /* 				      if(supg!=0.) */
+      /* 					{ */
+      /* 					  h_elem_deriv = 0.; */
+      /* 					  for( q=0; q<dim; q++ ) */
+      /* 					    { */
+      /* 					      h_elem_deriv +=  */
+      /* 						hh[q][p]*vcent[q]*vcent[q]*dh_dxnode[q][j]*h_elem_inv/4.; */
+      /* 					    }  */
+      /* 					} */
 				      
-				      mass = 0.;
-				      mass_a = 0.;
-				      mass_b = 0.;
-				      if ( pd->TimeIntegration != STEADY )
-					{
-					  if ( pd->e[eqn] & T_MASS )
-					    {
-					      mass_a = s_dot[a][b];
-					      mass_a *= wt_func * ( d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj );
+      /* 				      mass = 0.; */
+      /* 				      mass_a = 0.; */
+      /* 				      mass_b = 0.; */
+      /* 				      if ( pd->TimeIntegration != STEADY ) */
+      /* 					{ */
+      /* 					  if ( pd->e[eqn] & T_MASS ) */
+      /* 					    { */
+      /* 					      mass_a = s_dot[a][b]; */
+      /* 					      mass_a *= wt_func * ( d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj ); */
 					      
-					      if(supg != 0.)
-						{
-						  for( w=0; w<dim; w++ )
-						    {
-						      mass_b += supg * (h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j]
-									+ h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] );
-						    }
-						  mass_b*= s_dot[a][b] * h3 * det_J;
-						}
+      /* 					      if(supg != 0.) */
+      /* 						{ */
+      /* 						  for( w=0; w<dim; w++ ) */
+      /* 						    { */
+      /* 						      mass_b += supg * (h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j] */
+      /* 									+ h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] ); */
+      /* 						    } */
+      /* 						  mass_b*= s_dot[a][b] * h3 * det_J; */
+      /* 						} */
 					      
-					      mass = mass_a + mass_b;
-					      mass *= at * wt * pd->etm[eqn][(LOG2_MASS)];
-					    }
-					}
+      /* 					      mass = mass_a + mass_b; */
+      /* 					      mass *= at * wt * pd->etm[eqn][(LOG2_MASS)]; */
+      /* 					    } */
+      /* 					} */
 				      
-				      advection   = 0.;
+      /* 				      advection   = 0.; */
 				      
-				      if ( pd->e[eqn] & T_ADVECTION )
-					{
-					  if(lambda != 0.)
-					    {
-					      /*
-					       * Four parts: 
-					       *    advection_a = 
-					       *    	Int ( ea.(v-xdot).d(Vv)/dmesh h3 |Jv| )
-					       *
-					       *    advection_b = 
-					       *  (i)	Int ( ea.(v-xdot).Vv h3 d(|Jv|)/dmesh )
-					       *  (ii)  Int ( ea.(v-xdot).d(Vv)/dmesh h3 |Jv| )
-					       *  (iii) Int ( ea.(v-xdot).Vv dh3/dmesh |Jv|   )
-					       *
-					       * For unsteady problems, we have an 
-					       * additional term
-					       *
-					       *    advection_c = 
-					       *    	Int ( ea.d(v-xdot)/dmesh.Vv h3 |Jv| )
-					       */
+      /* 				      if ( pd->e[eqn] & T_ADVECTION ) */
+      /* 					{ */
+      /* 					  if(lambda != 0.) */
+      /* 					    { */
+      /* 					      /\* */
+      /* 					       * Four parts:  */
+      /* 					       *    advection_a =  */
+      /* 					       *    	Int ( ea.(v-xdot).d(Vv)/dmesh h3 |Jv| ) */
+      /* 					       * */
+      /* 					       *    advection_b =  */
+      /* 					       *  (i)	Int ( ea.(v-xdot).Vv h3 d(|Jv|)/dmesh ) */
+      /* 					       *  (ii)  Int ( ea.(v-xdot).d(Vv)/dmesh h3 |Jv| ) */
+      /* 					       *  (iii) Int ( ea.(v-xdot).Vv dh3/dmesh |Jv|   ) */
+      /* 					       * */
+      /* 					       * For unsteady problems, we have an  */
+      /* 					       * additional term */
+      /* 					       * */
+      /* 					       *    advection_c =  */
+      /* 					       *    	Int ( ea.d(v-xdot)/dmesh.Vv h3 |Jv| ) */
+      /* 					       *\/ */
 					      
-					      advection_a =  R_advection;
+      /* 					      advection_a =  R_advection; */
 
-					      advection_a *= wt_func *(  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj );
+      /* 					      advection_a *= wt_func *(  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj ); */
 					      
-					      d_vdotdels_dm = 0.;
-					      for ( q=0; q<dim; q++)
-						{
-						  d_vdotdels_dm += (v[q]-x_dot[q]) * d_grad_s_dmesh[q][a][b] [p][j];
-						}
+      /* 					      d_vdotdels_dm = 0.; */
+      /* 					      for ( q=0; q<dim; q++) */
+      /* 						{ */
+      /* 						  d_vdotdels_dm += (v[q]-x_dot[q]) * d_grad_s_dmesh[q][a][b] [p][j]; */
+      /* 						} */
 					  
-					      advection_b =  d_vdotdels_dm;
-					      advection_b *=  wt_func *det_J * h3;
+      /* 					      advection_b =  d_vdotdels_dm; */
+      /* 					      advection_b *=  wt_func *det_J * h3; */
 					  
-					      advection_c = 0.;	
-					      if ( pd->TimeIntegration != STEADY )
-						{
-						  if ( pd->e[eqn] & T_MASS )
-						    {
-						      d_xdotdels_dm = (1.+2.*tt) * phi_j/dt 
-							* grad_s[p][a][b];
+      /* 					      advection_c = 0.;	 */
+      /* 					      if ( pd->TimeIntegration != STEADY ) */
+      /* 						{ */
+      /* 						  if ( pd->e[eqn] & T_MASS ) */
+      /* 						    { */
+      /* 						      d_xdotdels_dm = (1.+2.*tt) * phi_j/dt  */
+      /* 							* grad_s[p][a][b]; */
 						  
-						      advection_c -= d_xdotdels_dm;
+      /* 						      advection_c -= d_xdotdels_dm; */
 						      
-						      advection_c *= wt_func * h3 * det_J;
-						    }
-						}
+      /* 						      advection_c *= wt_func * h3 * det_J; */
+      /* 						    } */
+      /* 						} */
 					      
-					      advection_d = 0.;	
-					      if(supg!=0.)
-						{
-						  for( w=0; w<dim; w++ )
-						    {
-						      advection_d+= supg *(h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j]
-									   + h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] );
-						    }
+      /* 					      advection_d = 0.;	 */
+      /* 					      if(supg!=0.) */
+      /* 						{ */
+      /* 						  for( w=0; w<dim; w++ ) */
+      /* 						    { */
+      /* 						      advection_d+= supg *(h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j] */
+      /* 									   + h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] ); */
+      /* 						    } */
 						  
-						  advection_d *= ( R_advection )* det_J * h3;
-						}
+      /* 						  advection_d *= ( R_advection )* det_J * h3; */
+      /* 						} */
 					  
-					      advection = advection_a + advection_b + advection_c + advection_d;
+      /* 					      advection = advection_a + advection_b + advection_c + advection_d; */
 					      
-					      advection *=  wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
+      /* 					      advection *=  wt * at * pd->etm[eqn][(LOG2_ADVECTION)]; */
 					      
-					    }
-					}
+      /* 					    } */
+      /* 					} */
 				      
-				      /*
-				       * Diffusion...
-				       */
+      /* 				      /\* */
+      /* 				       * Diffusion... */
+      /* 				       *\/ */
 				      
-				      diffusion = 0.;
+      /* 				      diffusion = 0.; */
 				      
-				      if ( pd->e[eqn] & T_DIFFUSION )
-					{
-					  diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
-					}
+      /* 				      if ( pd->e[eqn] & T_DIFFUSION ) */
+      /* 					{ */
+      /* 					  diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)]; */
+      /* 					} */
 				      
-				      /*
-				       * Source term...
-				       */
+      /* 				      /\* */
+      /* 				       * Source term... */
+      /* 				       *\/ */
 				      
-				      source = 0.;
+      /* 				      source = 0.; */
 				      
-				      if ( pd->e[eqn] & T_SOURCE )
-					{
-					  source_c = 0.;
-					  if(supg !=0.)
-					    {
-					      for( w=0;w<dim;w++)
-						{
-						  source_c+= supg * (h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j]
-								     + h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] ); 
-						}
-					      source_c *= R_source * det_J * h3;
-					    }
+      /* 				      if ( pd->e[eqn] & T_SOURCE ) */
+      /* 					{ */
+      /* 					  source_c = 0.; */
+      /* 					  if(supg !=0.) */
+      /* 					    { */
+      /* 					      for( w=0;w<dim;w++) */
+      /* 						{ */
+      /* 						  source_c+= supg * (h_elem*v[w]* bf[eqn]->d_grad_phi_dmesh[i][w] [p][j] */
+      /* 								     + h_elem_deriv * v[w]*bf[eqn]->grad_phi[i] [w] );  */
+      /* 						} */
+      /* 					      source_c *= R_source * det_J * h3; */
+      /* 					    } */
 					  
-					  source  = source_a + source_b + source_c;
+      /* 					  source  = source_a + source_b + source_c; */
 					  
-					  source *=  wt * pd->etm[eqn][(LOG2_SOURCE)];
+      /* 					  source *=  wt * pd->etm[eqn][(LOG2_SOURCE)]; */
 				      
-					}
+      /* 					} */
 				      
-				      lec->J[peqn][pvar][i][j] +=
-					mass + advection + diffusion + source;
-				    }
-				}
-			    }
+      /* 				      lec->J[peqn][pvar][i][j] += */
+      /* 					mass + advection + diffusion + source; */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
 		      
-			  /*
-			   * J_S_G
-			   */
-			  for ( p=0; p<VIM; p++)
-			    {
-			      for ( q=0; q<VIM; q++)
-				{
-				  var =  v_g[p][q];
+      /* 			  /\* */
+      /* 			   * J_S_G */
+      /* 			   *\/ */
+      /* 			  for ( p=0; p<VIM; p++) */
+      /* 			    { */
+      /* 			      for ( q=0; q<VIM; q++) */
+      /* 				{ */
+      /* 				  var =  v_g[p][q]; */
 				
-				  if ( pd->v[var] )
-				    {
-				      pvar = upd->vp[var];
-				      for ( j=0; j<ei->dof[var]; j++)
-				        {
-					  phi_j = bf[var]->phi[j];
-				   	  advection   = 0.;
-					  advection_a   = 0.;
-					  if ( pd->e[eqn] & T_ADVECTION )
-					    {
-					      if(lambda != 0.)
-					        {
-				                  // Switching up q and p since derivatives evaluated with gt
-						  for (k=0; k<VIM; k++)
-					            {
-					              advection += -d_omega_d_g[a][k][q][p]*s[k][b]
-				                                   + s[a][k]*d_omega_d_g[k][b][q][p];
-				                    }
-				                  advection -= 2.0 * d_B_d_g[a][b][q][p]; 
-						  advection *=  phi_j* h3 * det_J ;
-						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
-						} 
-					    }
+      /* 				  if ( pd->v[var] ) */
+      /* 				    { */
+      /* 				      pvar = upd->vp[var]; */
+      /* 				      for ( j=0; j<ei->dof[var]; j++) */
+      /* 				        { */
+      /* 					  phi_j = bf[var]->phi[j]; */
+      /* 				   	  advection   = 0.; */
+      /* 					  advection_a   = 0.; */
+      /* 					  if ( pd->e[eqn] & T_ADVECTION ) */
+      /* 					    { */
+      /* 					      if(lambda != 0.) */
+      /* 					        { */
+      /* 				                  // Switching up q and p since derivatives evaluated with gt */
+      /* 						  for (k=0; k<VIM; k++) */
+      /* 					            { */
+      /* 					              advection += -d_omega_d_g[a][k][q][p]*s[k][b] */
+      /* 				                                   + s[a][k]*d_omega_d_g[k][b][q][p]; */
+      /* 				                    } */
+      /* 				                  advection -= 2.0 * d_B_d_g[a][b][q][p];  */
+      /* 						  advection *=  phi_j* h3 * det_J ; */
+      /* 						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 						}  */
+      /* 					    } */
 					  
-					  /*
-					   * Diffusion...
-					   */
+      /* 					  /\* */
+      /* 					   * Diffusion... */
+      /* 					   *\/ */
 					  
-					  diffusion = 0.;
+      /* 					  diffusion = 0.; */
 					  
-					  if ( pd->e[eqn] & T_DIFFUSION )
-					    {
-					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
-					    }
+      /* 					  if ( pd->e[eqn] & T_DIFFUSION ) */
+      /* 					    { */
+      /* 					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)]; */
+      /* 					    } */
 					  
-					  /*
-					   * Source term...
-					   */
+      /* 					  /\* */
+      /* 					   * Source term... */
+      /* 					   *\/ */
 					  
-					  source = 0.;		      
+      /* 					  source = 0.;		       */
 					  
-					  lec->J[peqn][pvar][i][j] +=
-					    advection + diffusion + source;
-					}
-				    }
-				}
-			    }
+      /* 					  lec->J[peqn][pvar][i][j] += */
+      /* 					    advection + diffusion + source; */
+      /* 					} */
+      /* 				    } */
+      /* 				} */
+      /* 			    } */
 		      
 			  
-			  /*
-			   * J_S_S
-			   */
-			  for ( p=0; p<VIM; p++)
-			    {
-			      for ( q=0; q<VIM; q++)
-				{
-                                  if (p<=q)
-                                  {
-				    var =  v_s[mode][p][q];
+      /* 			  /\* */
+      /* 			   * J_S_S */
+      /* 			   *\/ */
+      /* 			  for ( p=0; p<VIM; p++) */
+      /* 			    { */
+      /* 			      for ( q=0; q<VIM; q++) */
+      /* 				{ */
+      /*                             if (p<=q) */
+      /*                             { */
+      /* 				    var =  v_s[mode][p][q]; */
 				  
-				    if ( pd->v[var] )
-				      {
-				        pvar = upd->vp[var];
-				        for ( j=0; j<ei->dof[var]; j++)
-					  {
-					    phi_j = bf[var]->phi[j];
-					    mass = 0.;
-					    if ( pd->TimeIntegration != STEADY )
-					      {
-					        if ( pd->e[eqn] & T_MASS )
-						  {
-						    mass = (1.+2.*tt) * phi_j/dt * (double)delta(a,p) * (double)delta(b,q); 
-						    mass *= h3 * det_J;
-						    mass *= wt_func * at * wt * pd->etm[eqn][(LOG2_MASS)];
-						  }
-					      }
+      /* 				    if ( pd->v[var] ) */
+      /* 				      { */
+      /* 				        pvar = upd->vp[var]; */
+      /* 				        for ( j=0; j<ei->dof[var]; j++) */
+      /* 					  { */
+      /* 					    phi_j = bf[var]->phi[j]; */
+      /* 					    mass = 0.; */
+      /* 					    if ( pd->TimeIntegration != STEADY ) */
+      /* 					      { */
+      /* 					        if ( pd->e[eqn] & T_MASS ) */
+      /* 						  { */
+      /* 						    mass = (1.+2.*tt) * phi_j/dt * (double)delta(a,p) * (double)delta(b,q);  */
+      /* 						    mass *= h3 * det_J; */
+      /* 						    mass *= wt_func * at * wt * pd->etm[eqn][(LOG2_MASS)]; */
+      /* 						  } */
+      /* 					      } */
 					  
-					    advection   = 0.;
+      /* 					    advection   = 0.; */
 					  
-					    if ( pd->e[eqn] & T_ADVECTION )
-					      {
-					        if(lambda != 0.)
-						  {
-						    if((a == p) && (b == q))
-						      {
-						        for( r=0; r<dim; r++)
-					                  {
-						            advection +=  (v[r]-x_dot[r])*  bf[var]->grad_phi[j][r];
-						          }
-						      }
+      /* 					    if ( pd->e[eqn] & T_ADVECTION ) */
+      /* 					      { */
+      /* 					        if(lambda != 0.) */
+      /* 						  { */
+      /* 						    if((a == p) && (b == q)) */
+      /* 						      { */
+      /* 						        for( r=0; r<dim; r++) */
+      /* 					                  { */
+      /* 						            advection +=  (v[r]-x_dot[r])*  bf[var]->grad_phi[j][r]; */
+      /* 						          } */
+      /* 						      } */
 						    
-				                    advection_a = 0.;
- 				                    advection_a += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p) * omega[q][b];
- 				                    if (p != q)
-			                            {
-					              advection_a += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q) * omega[p][b];
-				                    }
-				                  for (k=0; k<VIM; k++)
-			                            {
-					              advection_a += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q];
-				                    }
-				                  advection_a -= 2.0 * d_B_d_s[a][b][p][q];
-					          advection_a *= phi_j;
-					          advection += advection_a;
-						  advection *=  h3 * det_J ;
-						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)];
-						}
-					    }
+      /* 				                    advection_a = 0.; */
+      /* 				                    advection_a += -omega[a][p]*(double)delta(b,q) + (double)delta(a,p) * omega[q][b]; */
+      /* 				                    if (p != q) */
+      /* 			                            { */
+      /* 					              advection_a += -omega[a][q]*(double)delta(b,p) + (double)delta(a,q) * omega[p][b]; */
+      /* 				                    } */
+      /* 				                  for (k=0; k<VIM; k++) */
+      /* 			                            { */
+      /* 					              advection_a += -d_omega_d_s[a][k][p][q] * s[k][b] + s[a][k] * d_omega_d_s[k][b][p][q]; */
+      /* 				                    } */
+      /* 				                  advection_a -= 2.0 * d_B_d_s[a][b][p][q]; */
+      /* 					          advection_a *= phi_j; */
+      /* 					          advection += advection_a; */
+      /* 						  advection *=  h3 * det_J ; */
+      /* 						  advection *= wt_func * wt * at * pd->etm[eqn][(LOG2_ADVECTION)]; */
+      /* 						} */
+      /* 					    } */
 					  
-					  /*
-					   * Diffusion...
-					   */
+      /* 					  /\* */
+      /* 					   * Diffusion... */
+      /* 					   *\/ */
 					  
-					  diffusion = 0.;
+      /* 					  diffusion = 0.; */
 					  
-					  if ( pd->e[eqn] & T_DIFFUSION )
-					    {
-					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
-					    }
+      /* 					  if ( pd->e[eqn] & T_DIFFUSION ) */
+      /* 					    { */
+      /* 					      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)]; */
+      /* 					    } */
 					  
-					  /*
-					   * Source term...
-					   */
+      /* 					  /\* */
+      /* 					   * Source term... */
+      /* 					   *\/ */
 					  
-					  source = 0.;		      
+      /* 					  source = 0.;		       */
 					  
-					  if ( pd->e[eqn] & T_SOURCE )
-					    {
-					      source  =  - Z * phi_j * d_exp_s_inv_ds[a][b][p][q] / lambda;
-				              if( eps != 0.0 && a==b )
-					        {
-					          source_a = ((double)delta(a,b) - exp_s_inv[a][b]) / lambda;
-				                  source_a *= eps * Z * d_exp_s_ds[a][b][p][q] * phi_j;
-				                  source += source_a;
-				                }
-				              if (alpha != 0.)
-				                {
-				                  source1 = 0.;
-				                  source1 += phi_j * (d_exp_s_ds[a][b][p][q] + d_exp_s_inv_ds[a][b][p][q]);
-				                  source1 *= alpha/lambda;
-				                  source += source1;
-					        }
+      /* 					  if ( pd->e[eqn] & T_SOURCE ) */
+      /* 					    { */
+      /* 					      source  =  - Z * phi_j * d_exp_s_inv_ds[a][b][p][q] / lambda; */
+      /* 				              if( eps != 0.0 && a==b ) */
+      /* 					        { */
+      /* 					          source_a = ((double)delta(a,b) - exp_s_inv[a][b]) / lambda; */
+      /* 				                  source_a *= eps * Z * d_exp_s_ds[a][b][p][q] * phi_j; */
+      /* 				                  source += source_a; */
+      /* 				                } */
+      /* 				              if (alpha != 0.) */
+      /* 				                { */
+      /* 				                  source1 = 0.; */
+      /* 				                  source1 += phi_j * (d_exp_s_ds[a][b][p][q] + d_exp_s_inv_ds[a][b][p][q]); */
+      /* 				                  source1 *= alpha/lambda; */
+      /* 				                  source += source1; */
+      /* 					        } */
 		      
-					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
+      /* 					      source *= det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)]; */
 					      
-					    }
+      /* 					    } */
 					  
-					  lec->J[peqn][pvar][i][j] +=
-					    mass + advection + diffusion + source;
-					} // Loop over j
-				    } // If pd->v[var]
-				} // If p <= q
-                              } // Loop over q
-			    } // Loop over p
-			} // Loop over i
-		    }  // if a<=b
-		} // Loop over b
-	    } // Loop over a
-	} // End Assemble Jacobian
+      /* 					  lec->J[peqn][pvar][i][j] += */
+      /* 					    mass + advection + diffusion + source; */
+      /* 					} // Loop over j */
+      /* 				    } // If pd->v[var] */
+      /* 				} // If p <= q */
+      /*                         } // Loop over q */
+      /* 			    } // Loop over p */
+      /* 			} // Loop over i */
+      /* 		    }  // if a<=b */
+      /* 		} // Loop over b */
+      /* 	    } // Loop over a */
+      /* 	} // End Assemble Jacobian */
       
     }
   return(status);
@@ -6520,36 +6503,16 @@ log_conf_analytic_2D_with_jac(dbl s[DIM][DIM],                   //s - stress
 void gradv_decomposition(dbl s[DIM][DIM],                     // log-conformation tensor
                          dbl g[DIM][DIM],                     // gradv
                          dbl B1[DIM][DIM],                    // B, symmetric tensor
-                         dbl omega[DIM][DIM],                 // omega, anit-symmetric tensor
-                         dbl d_B_d_g[DIM][DIM][DIM][DIM],     // derivative of B wrt g
-                         dbl d_B_d_s[DIM][DIM][DIM][DIM],     // derivative of B wrt s
-                         dbl d_omega_d_g[DIM][DIM][DIM][DIM], // derivative of omega wrt g
-                         dbl d_omega_d_s[DIM][DIM][DIM][DIM]) // derivative of omega wrt s
+                         dbl omega[DIM][DIM])                 // omega, anit-symmetric tensor
 {
 
   int i,j,p,q,siz,k;
   dbl gt[DIM][DIM];
-  dbl s_p[DIM][DIM], exp_s[DIM][DIM];
-  dbl ds = 1e-9;
-  dbl exp_s_p[DIM][DIM], R1_p[DIM][DIM];
-  dbl B1_p[DIM][DIM], omega_p[DIM][DIM];
-  dbl B1_p2[DIM][DIM], omega_p2[DIM][DIM];
+  dbl exp_s[DIM][DIM];
   dbl eig_values[DIM];
-  dbl eig_values_p[DIM];
-  dbl d_alpha_d_g[DIM][DIM][DIM][DIM];
-  dbl tmp[DIM][DIM], tmp2[DIM][DIM];
-  dbl R1_T[DIM][DIM], R1[DIM][DIM];
+  dbl R1[DIM][DIM];
 
-  dbl d_omega1_d_g[DIM][DIM];
-  dbl c1, d_lambda;
-  dbl d_omega2_d_g[DIM][DIM][DIM][DIM];
-  dbl d_m11_d_g[DIM][DIM];
-  dbl d_m22_d_g[DIM][DIM];
-  dbl d_B1_d_g[DIM][DIM][DIM][DIM];
-
-  memset(R1_T, 0 , sizeof(double)*DIM*DIM);
   memset(gt, 0, sizeof(double)*DIM*DIM);
-  memset(s_p, 0 , sizeof(double)*DIM*DIM);
 
   for (i=0; i<VIM; i++)
     {
@@ -6560,124 +6523,6 @@ void gradv_decomposition(dbl s[DIM][DIM],                     // log-conformatio
     }
 
   compute_B_omega(s, exp_s, gt, eig_values, R1, B1, omega);
-  for (i=0; i<VIM; i++)
-    {
-      for (j=0; j<VIM; j++)
-        {
-          R1_T[i][j] = R1[j][i];
-        }
-    }
-
-  // Calculate d_omega_d_s and d_B_d_s by perturbation
-
-  for (i=0; i<VIM; i++)
-    {
-      for (j=0; j<VIM; j++)
-        {
-          for (p=0; p<VIM; p++)
-            {
-              for (q=0; q<VIM; q++)
-                {
-                  s_p[p][q] = s[p][q];
-                }
-            }
-          s_p[i][j] += ds;
-          if (i != j) s_p[j][i] = s_p[i][j];
-
-          compute_B_omega(s_p, exp_s_p, gt, eig_values_p, R1_p, B1_p, omega_p);
-          for (p=0; p<VIM; p++)
-            {
-              for (q=0; q<VIM; q++)
-                {
-                  d_omega_d_s[p][q][i][j] = (omega_p[p][q] - omega[p][q]) / ds;
-                  d_B_d_s[p][q][i][j] = (B1_p[p][q] - B1[p][q]) / ds;
-                }
-            }
-        }
-    }
-
-  siz = sizeof(double)*DIM*DIM;
-  memset(d_omega1_d_g, 0, siz);
-
-  siz = sizeof(double)*DIM*DIM*DIM*DIM;
-  memset(d_alpha_d_g, 0 , siz);
-  memset(d_omega_d_g, 0, siz);
-  memset(d_omega2_d_g, 0, siz);
-  memset(d_B1_d_g, 0 , siz);
-  memset(d_B_d_g, 0 , siz);
-
-  // Calculate d_omega_d_g and d_B_d_g
-  d_alpha_d_g[0][0][0][0] = R1[0][0];
-  d_alpha_d_g[0][0][1][0] = R1[1][0];
-  d_alpha_d_g[0][1][0][1] = R1[0][0];
-  d_alpha_d_g[0][1][1][1] = R1[1][0];
-  d_alpha_d_g[1][0][0][0] = R1[0][1];
-  d_alpha_d_g[1][0][1][0] = R1[1][1];
-  d_alpha_d_g[1][1][0][1] = R1[0][1];
-  d_alpha_d_g[1][1][1][1] = R1[1][1];
-
-  // Calculate derivative terms for d_function
-  d_lambda = eig_values[1] - eig_values[0];
-  if(fabs(d_lambda) > 1.e-8)
-    {
-      c1 = 1. / d_lambda;
-    }
-  else
-    {
-      c1 = 1.;
-    }
-  //if(fabs(d_lambda) < 1.e-7)
-  //  {
-  //    printf("d_lambda = %f\n", d_lambda);
-  //    scanf("%d",&i);
-  //  }
-  for(i=0; i<VIM; i++)
-    {
-      for(j=0; j<VIM; j++)
-        {
-          d_omega1_d_g[i][j] = c1 * (eig_values[1]*(d_alpha_d_g[0][0][i][j]*R1[0][1] + d_alpha_d_g[0][1][i][j]*R1[1][1])
-                                     + eig_values[0]*(d_alpha_d_g[1][0][i][j]*R1[0][0] + d_alpha_d_g[1][1][i][j]*R1[1][0]));
-          d_omega2_d_g[0][1][i][j] = d_omega1_d_g[i][j];
-          d_omega2_d_g[1][0][i][j] = -d_omega1_d_g[i][j];
-
-          d_m11_d_g[i][j] = d_alpha_d_g[0][0][i][j]*R1[0][0] + d_alpha_d_g[0][1][i][j]*R1[1][0];
-          d_m22_d_g[i][j] = d_alpha_d_g[1][0][i][j]*R1[0][1] + d_alpha_d_g[1][1][i][j]*R1[1][1];
-          d_B1_d_g[0][0][i][j] = d_m11_d_g[i][j];
-          d_B1_d_g[1][1][i][j] = d_m22_d_g[i][j];
-        }
-    }
-
-  for (p=0; p<VIM; p++)
-    {
-      for (q=0; q<VIM; q++)
-        {
-          for (i=0; i<VIM; i++)
-            {
-              for (j=0; j<VIM; j++)
-                {
-                  tmp[i][j] = 0.;
-                  tmp2[i][j] = 0.;
-                  for (k=0; k<VIM; k++)
-                    {
-                      tmp[i][j] += R1[i][k]*d_omega2_d_g[k][j][p][q];
-                      tmp2[i][j] += R1[i][k]*d_B1_d_g[k][j][p][q];
-                    }
-                }
-            }
-          for (i=0; i<VIM; i++)
-            {
-              for(j=0; j<VIM; j++)
-                {
-                  for(k=0; k<VIM; k++)
-                    {
-                      d_omega_d_g[i][j][p][q] += tmp[i][k]*R1_T[k][j];
-                      d_B_d_g[i][j][p][q] += tmp2[i][k]*R1_T[k][j];
-                    }
-                }
-            }
-        } // for q
-    } // for p 
-
 
 }
 
@@ -6764,6 +6609,7 @@ void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformatio
         {
           for(j=0; j<VIM; j++)
             {
+              omega[i][j] = 0.;
               for(w=0; w<VIM; w++)
                 {
                   omega[i][j] += tmp2[i][w] * R1_T[w][j];
@@ -6791,6 +6637,7 @@ void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformatio
         {
           for(j=0; j<VIM; j++)
             {
+	      omega[i][j] = 0.;
               for(w=0; w<VIM; w++)
                 {
                   omega[i][j] += tmp2[i][w] * R1_T[w][j];
@@ -6817,6 +6664,7 @@ void compute_B_omega(    dbl s[DIM][DIM],                     // log-conformatio
     {
       for(j=0; j<VIM; j++)
         {
+          B1[i][j] = 0.;
           for(w=0; w<VIM; w++)
             {
               B1[i][j] += tmp[i][w] * R1_T[w][j];
