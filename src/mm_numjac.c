@@ -245,14 +245,14 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   af->Assemble_LSA_Jacobian_Matrix = FALSE;
   af->Assemble_LSA_Mass_Matrix = FALSE;
 
-  memset(resid_vector, 0, numProcUnknowns*sizeof(dbl));
-  (void) matrix_fill_full(ams, x, resid_vector, 
-			  x_old, x_older, xdot, xdot_old,x_update,
-			  &delta_t, &theta, 
-			  first_elem_side_BC_array,
-			  &time_value, exo, dpi, 
-			  &num_total_nodes, 
-			  h_elem_avg, U_norm, NULL); 
+  //memset(resid_vector, 0, numProcUnknowns*sizeof(dbl));
+  //(void) matrix_fill_full(ams, x, resid_vector, 
+//			  x_old, x_older, xdot, xdot_old,x_update,
+//			  &delta_t, &theta, 
+//			  first_elem_side_BC_array,
+//			  &time_value, exo, dpi, 
+//			  &num_total_nodes, 
+//			  h_elem_avg, U_norm, NULL); 
 
 
 
