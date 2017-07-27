@@ -392,7 +392,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	zeroCA = -1;
 	if (i == 0) zeroCA = 1; 
 	load_ei(elem_list[i], exo, 0);
-	matrix_fill(ams, x_1, resid_vector_1, 
+	matrix_fill_stress(ams, x_1, resid_vector_1, 
 		    x_old, x_older,  xdot, xdot_old, x_update,
 		    &delta_t, &theta, 
 		    first_elem_side_BC_array,
