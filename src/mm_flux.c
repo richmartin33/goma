@@ -107,6 +107,7 @@ evaluate_flux(
 			  {
   int j;			/* local index loop counter                 */
   int i;			/* Index for the local node number - row    */
+  int r;
   int ip = 0, a, b, c, p, w = -1;
   int mn;
   int var;
@@ -705,11 +706,11 @@ evaluate_flux(
                               {
                                 if(vn->evssModel==LOG_CONF)
                                   {
-                                    for (i=0; i<VIM; i++)
+                                    for (p=0; p<VIM; p++)
                                       {
-                                        for (j=0; j<VIM; j++)
+                                        for (r=0; j<VIM; j++)
                                           {
-                                            log_c[i][j] = fv->S[ve_mode][i][j];
+                                            log_c[p][r] = fv->S[ve_mode][p][r];
                                           }
                                       }
                                     compute_exp_s(log_c, exp_s, eig_values, R1);
