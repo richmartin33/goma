@@ -708,7 +708,7 @@ evaluate_flux(
                                   {
                                     for (p=0; p<VIM; p++)
                                       {
-                                        for (r=0; j<VIM; j++)
+                                        for (r=0; r<VIM; r++)
                                           {
                                             log_c[p][r] = fv->S[ve_mode][p][r];
                                           }

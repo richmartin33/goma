@@ -210,6 +210,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
        * use the element size for displacements and for other
        * quantities assume x is order 1.
        */
+      dbl scale_tmp = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
       if (x_scale[i] == 0.)
         {
           switch (i)
@@ -220,7 +221,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
             case SOLID_DISPLACEMENT1:
             case SOLID_DISPLACEMENT2:
             case SOLID_DISPLACEMENT3:
-              x_scale[i] = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
+              x_scale[i] = scale_tmp;
               break;
             
             default:
