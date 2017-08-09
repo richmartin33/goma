@@ -203,6 +203,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       count[var_i]++;
       x_scale[var_i] += x[i]*x[i];
     }
+  dbl scale_tmp = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
   for (i = 0; i < MAX_VARIABLE_TYPES; i++) 
     {
       if (count[i]) x_scale[i] = sqrt(x_scale[i]/count[i]);
@@ -210,7 +211,6 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
        * use the element size for displacements and for other
        * quantities assume x is order 1.
        */
-      dbl scale_tmp = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
       if (x_scale[i] == 0.)
         {
           switch (i)
