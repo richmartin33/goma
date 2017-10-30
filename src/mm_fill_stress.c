@@ -2473,6 +2473,7 @@ assemble_stress_log_conf(dbl tt,
   int v_g[DIM][DIM]; 
   dbl s[DIM][DIM], exp_s[DIM][DIM];
   dbl exp_s_inv[DIM][DIM];
+  dbl det_exp_s;
   dbl s_dot[DIM][DIM];    
   dbl grad_s[DIM][DIM][DIM];
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
@@ -2513,6 +2514,17 @@ assemble_stress_log_conf(dbl tt,
   dbl omega1;
   dbl n1;
 
+  // Dot products
+  dbl s_dot_omega[DIM][DIM];
+  dbl omega_dot_s[DIM][DIM];
+  dbl c_inv2_Nc[DIM][DIM];
+  dbl exp_s_inv2[DIM][DIM];
+  dbl N_dot_exp_s_inv[DIM][DIM];
+  dbl exp_s_inv_dot_B[DIM][DIM];
+  dbl c_inv_dot_N[DIM][DIM];
+  dbl c_inv_dot_N_c_inv[DIM][DIM];
+  dbl c_inv2_dot_N[DIM][DIM];
+  
   //Advective terms
   dbl v_dot_del_s[DIM][DIM];
   dbl x_dot_del_s[DIM][DIM];
@@ -2698,7 +2710,11 @@ assemble_stress_log_conf(dbl tt,
 	{
           compute_exp_s(s, exp_s, eig_values, R1);
           /* Calculate exp_s_inv */
-      
+          det_exp_s = exp_s[0][0]*exp_s[1][1] - exp_s[0][1]*exp_s[0][1];
+	  exp_s_inv[0][0] = exp_s[1][1]/det_exp_s;
+	  exp_s_inv[0][1] = -exp_s[0][1]/det_exp_s;
+	  exp_s_inv[1][0] = exp_s_inv[0][1];
+	  exp_s_inv[1][1] = exp_s[0][0]/det_exp_s;
 	}
 
       memset(D, 0, sizeof(double)*DIM*DIM);
@@ -2802,55 +2818,30 @@ assemble_stress_log_conf(dbl tt,
       // Evaluating tensor products
       memset(s_dot_omega, 0, siz);
       memset(omega_dot_s, 0, siz);
-      //memset()
+      memset(exp_s_inv2, 0, siz);
+      memset(c_inv2_Nc, 0, siz); /* (exp_s_inv*exp_s_inv)*(N*exp_s) */
+      memset(N_dot_exp_s_inv, 0, siz);
+      memset(exp_s_inv_dot_B, 0, siz);
+      memset(c_inv_dot_N, 0, siz);
+      memset(c_inv_dot_N_c_inv, 0, siz);
+      memset(c_inv2_dot_N, 0, siz);
 
-      // Tensor products for PTT
-      //if (xi != 0.0)
-      //  {
-      //    (void) tensor_dot();
-      //  } 
+      (void) tensor_dot(s, omega, s_dot_omega, VIM);
+      (void) tensor_dot(omega, s, omega_dot_s, VIM);
       
-      memset(tmp1, 0, siz);
-      memset(tmp2, 0, siz);
-      memset(tmp3, 0, siz);
-      memset(advection_term1, 0, siz);
-      memset(source_term1, 0, siz);
-
-      for (a=0; a<VIM; a++)
-        {
-          for (b=0; b<VIM; b++)
-            {
-	      if ( a != b )
- 	        {
-                  d_lambda = eig_values[b]-eig_values[a];
-                  if (fabs(d_lambda) > 1.e-8)
-                    {
-                      tmp1[a][b] += (log(eig_values[b]) - log(eig_values[a]))/d_lambda;
-                      tmp1[a][b] *= (eig_values[a]*M1[b][a] + eig_values[b]*M1[a][b]);
-                    }
-		  else
-		    {
-                      tmp1[a][b] += M1[a][b] + M1[b][a];
-	            }
-	        }
-              if ( a == b )
-                {
-                  source_term1[a][b] += Z * (1.0 - D[a][a]) /lambda;
-                  if(alpha != 0)
-                    {
-                      source_term1[a][b] += alpha*(2.0 * D[a][a] - 1.0 - D_dot_D[a][a])/lambda;
- 	            }
-                  source_term1[a][b] /= eig_values[a];
-  	          source_term1[a][b] += 2.0*M1[a][a];
-                }
-            }
-        }
-
-      (void) tensor_dot(R1, tmp1, tmp2, VIM);
-      (void) tensor_dot(tmp2, R1_T, advection_term1, VIM);
-      (void) tensor_dot(R1, source_term1, tmp3, VIM);
-      (void) tensor_dot(tmp3, R1_T, source_term1, VIM);
-
+      // Tensor products for PTT
+      if (xi != 0.0)
+       {
+	 memset(tmp1, 0, siz);
+         (void) tensor_dot(exp_s_inv, exp_s_inv, exp_s_inv2, VIM);
+	 (void) tensor_dot(N, exp_s, tmp1, VIM);
+	 (void) tensor_dot(exp_s_inv2, tmp1, c_inv2_Nc, VIM);
+	 (void) tensor_dot(N, exp_s_inv, N_dot_exp_s_inv, VIM);
+	 (void) tensor_dot(exp_s_inv, B, exp_s_inv_dot_B, VIM);
+	 (void) tensor_dot(exp_s_inv, N_dot_exp_s_inv, c_inv_dot_N_c_inv, VIM);
+	 (void) tensor_dot(exp_s_inv2, N, c_inv2_dot_N, VIM);
+       } 
+      
       if(af->Assemble_Residual)
 	{
 	  for(a=0; a<VIM; a++)
@@ -2887,9 +2878,22 @@ assemble_stress_log_conf(dbl tt,
 
 			  advection = 0.;
 			  if(pd->e[eqn] & T_ADVECTION)
- 			    {  
+ 			    {
+			      advection_term1 = omega_dot_s[a][b] - s_dot_omega[a][b] + 2.0*B[a][b];
+			      advection_term2 = 0.;
+			      advection_term3 = 0.;
+			      if (xi != 0)
+				{
+				  advection_term2 += 4.*B[a][b] - c_inv2_Nc[a][b] + N_dot_exp_s_inv[a][b];
+				  advection_term2 *= xi/2.;
+				  advection_term3 += 2.*exp_s_inv_dot_B[a][b] + c_inv_dot_N_c_inv[a][b];
+				  advection_term3 -= c_inv2_dot_N[a][b];
+				  advection_term3 *= xi;
+				}
+			      
 			      advection += v_dot_del_s[a][b] - x_dot_del_s[a][b];
-			      advection -= advection_term1[a][b];
+			      advection -= advection_term1;
+			      advection += advection_term2 - advection_term3
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
