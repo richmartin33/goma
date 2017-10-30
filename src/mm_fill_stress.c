@@ -2458,14 +2458,12 @@ assemble_stress_log_conf(dbl tt,
   dbl mass_a, mass_b;
   dbl advection;	
   dbl source;
-  dbl source_term1[DIM][DIM];
   dbl diffusion;
 
   dbl wt_func;
   dbl phi_j;
   dbl wt;
   dbl tmp1[DIM][DIM],tmp2[DIM][DIM],tmp3[DIM][DIM];
-  dbl advection_term1[DIM][DIM];
 
   //Variables for stress, velocity gradient
   int R_s[MAX_MODES][DIM][DIM]; 
@@ -2491,7 +2489,7 @@ assemble_stress_log_conf(dbl tt,
   dbl d_at_dT[MDE];
   dbl wlf_denom;
 
-  //Consitutive prameters
+  //Consitutive parameters
   dbl alpha;     
   dbl lambda=0;    
   dbl d_lambda;
@@ -2525,7 +2523,7 @@ assemble_stress_log_conf(dbl tt,
   dbl c_inv_dot_N_c_inv[DIM][DIM];
   dbl c_inv2_dot_N[DIM][DIM];
   
-  //Advective terms
+  //Advective and source terms
   dbl v_dot_del_s[DIM][DIM];
   dbl x_dot_del_s[DIM][DIM];
   dbl d_xdotdels_dm;
@@ -2534,7 +2532,11 @@ assemble_stress_log_conf(dbl tt,
   dbl x_dot_del_exp_s[DIM][DIM];
   dbl d_xdotdelexps_dm;
   dbl d_vdotdelexps_dm;
-
+  dbl source1;
+  dbl advection_term1;
+  dbl advection_term2;
+  dbl advection_term3;
+  
   //Trace of stress
   dbl trace=0.0; 
 
@@ -2760,7 +2762,7 @@ assemble_stress_log_conf(dbl tt,
         }  
 
       //Predetermine advective terms
-      trace = eig_values[0]+eig_values[1]; 
+      trace = exp_s[0][0]+exp_s[1][1]; 
       
       for(a=0; a<VIM; a++)
       	{
@@ -2893,7 +2895,7 @@ assemble_stress_log_conf(dbl tt,
 			      
 			      advection += v_dot_del_s[a][b] - x_dot_del_s[a][b];
 			      advection -= advection_term1;
-			      advection += advection_term2 - advection_term3
+			      advection += advection_term2 - advection_term3;
 			      advection *= wt_func*at*det_J*wt*h3;
 			      advection *= pd->etm[eqn][(LOG2_ADVECTION)];			      
 			    }
@@ -2901,7 +2903,17 @@ assemble_stress_log_conf(dbl tt,
                           source = 0.0; 
                           if(pd->e[eqn] & T_SOURCE)
                             {
-		              source -= source_term1[a][b];
+			      source -= Z*exp_s_inv[a][b]/lambda;
+			      if (a == b)
+				{
+				  source += Z/lambda;
+				}
+			      if (alpha != 0.)
+				{
+				  source1 = exp_s[a][b] - 2.0 + exp_s_inv[a][b];
+				  source1 *= alpha/lambda;
+				  source += source1;
+				}
                               source *= wt_func*det_J*h3*wt;     
                               source *= pd->etm[eqn][(LOG2_SOURCE)];
                             }
