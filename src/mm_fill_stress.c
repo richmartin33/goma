@@ -2472,6 +2472,7 @@ assemble_stress_log_conf(dbl tt,
   int v_s[MAX_MODES][DIM][DIM]; 
   int v_g[DIM][DIM]; 
   dbl s[DIM][DIM], exp_s[DIM][DIM];
+  dbl exp_s_inv[DIM][DIM];
   dbl s_dot[DIM][DIM];    
   dbl grad_s[DIM][DIM][DIM];
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
@@ -2493,7 +2494,8 @@ assemble_stress_log_conf(dbl tt,
   dbl alpha;     
   dbl lambda=0;    
   dbl d_lambda;
-  dbl eps;      
+  dbl eps;
+  dbl xi;      
   dbl Z=1.0;        
   dbl dZ_dtrace =0.0;
 
@@ -2505,6 +2507,11 @@ assemble_stress_log_conf(dbl tt,
   dbl Rt_dot_gradv[DIM][DIM];
   dbl D[DIM][DIM];
   dbl D_dot_D[DIM][DIM];
+  dbl N[DIM][DIM];
+  dbl B[DIM][DIM];
+  dbl omega[DIM][DIM];
+  dbl omega1;
+  dbl n1;
 
   //Advective terms
   dbl v_dot_del_s[DIM][DIM];
@@ -2690,6 +2697,8 @@ assemble_stress_log_conf(dbl tt,
       if(VIM==2)
 	{
           compute_exp_s(s, exp_s, eig_values, R1);
+          /* Calculate exp_s_inv */
+      
 	}
 
       memset(D, 0, sizeof(double)*DIM*DIM);
@@ -2751,13 +2760,56 @@ assemble_stress_log_conf(dbl tt,
       	    }
       	}
 
-      //PTT exponent
+      // PTT parameters
       eps  = ve[mode]->eps;
+      xi   = ve[mode]->xi;
 
-      //Exponential term for PTT
+      // Exponential term for PTT
       Z = exp(eps*(trace - (double) dim));
 
       siz = sizeof(double)*DIM*DIM;
+      n1 = (M1[0][1]+M1[1][0]) / ( 1./eig_values[1] - 1./eig_values[0] );
+      omega1 = (eig_values[1]*M1[0][1] + eig_values[0]*M1[1][0]) 
+                  / (eig_values[1] - eig_values[0]);
+     
+      // Evaluate N
+      memset(tmp1, 0, siz);
+      memset(tmp2, 0, siz);
+      memset(N, 0, siz);
+      tmp1[0][1]=n1;
+      tmp1[1][0]=-n1;
+      (void) tensor_dot(R1, tmp1, tmp2, VIM);
+      (void) tensor_dot(tmp2, R1_T, N, VIM);
+
+      // Evaluate B
+      memset(tmp1, 0, siz);
+      memset(tmp2, 0, siz);
+      memset(B, 0, siz);
+      tmp1[0][0]=M1[0][0];
+      tmp1[1][1]=M1[1][1];
+      (void) tensor_dot(R1, tmp1, tmp2, VIM);
+      (void) tensor_dot(tmp2, R1_T, B, VIM);
+
+      // Evaluate omega 
+      memset(tmp1, 0, siz);
+      memset(tmp2, 0, siz);
+      memset(omega, 0, siz);
+      tmp1[0][1]=omega1;
+      tmp1[1][0]=-omega1;
+      (void) tensor_dot(R1, tmp1, tmp2, VIM);
+      (void) tensor_dot(tmp2, R1_T, omega, VIM);
+     
+      // Evaluating tensor products
+      memset(s_dot_omega, 0, siz);
+      memset(omega_dot_s, 0, siz);
+      //memset()
+
+      // Tensor products for PTT
+      //if (xi != 0.0)
+      //  {
+      //    (void) tensor_dot();
+      //  } 
+      
       memset(tmp1, 0, siz);
       memset(tmp2, 0, siz);
       memset(tmp3, 0, siz);
