@@ -265,7 +265,7 @@ int TFMP_LIQ_VELO = -1;
 int TFMP_INV_PECLET = -1;
 int TFMP_KRG    = -1;
 int LOG_CONF_MAP = -1;
-
+int LOGC_TOTAL_STRESS = -1;
 
 int len_u_post_proc = 0;	/* size of dynamically allocated u_post_proc
 				 * actually is */
@@ -2564,6 +2564,69 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     } // Loop over modes
   }
 
+ if (LOGC_TOTAL_STRESS != -1 && pd->v[POLYMER_STRESS11] && vn->evssModel == LOG_CONF) {
+    index = 0;
+    VISCOSITY_DEPENDENCE_STRUCT d_mup_struct;
+    VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
+    d_mup = NULL; 
+    double lambda;
+    double R1[DIM][DIM];
+    double eig_values[DIM];
+    dbl exp_s[DIM][DIM];
+    dbl S_tot[DIM][DIM];
+    dbl MS[MAX_MODES][DIM][DIM];
+    memset(S_tot, 0, sizeof(double)*DIM*DIM);
+    
+    for (mode = 0; mode < vn->modes; mode++) {
+      compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
+      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      // Polymer time constant
+      lambda = 0.0;
+      if(ve[mode]->time_constModel == CONSTANT)
+        {
+          lambda = ve[mode]->time_const;
+        }      
+      if(lambda==0.0)
+        {
+          EH( -1, "The conformation tensor needs a non-zero polymer time constant.");
+        }
+      if(mup==0.0)
+        {
+          EH( -1, "The conformation tensor needs a non-zero polymer viscosity.");
+        }
+      
+      if (pd->v[v_s[mode][0][0]])
+	{      
+	  for (a = 0; a < VIM; a++)
+	    {
+	      for (b = 0; b < VIM; b++)
+		{
+		  if (pd->v[v_s[mode][a][b]])
+		    {
+		      MS[mode][a][b] = (mup/lambda)*(exp_s[a][b]-delta(a,b));
+		      S_tot[a][b] += MS[mode][a][b];
+		    }
+		} // for b
+	    } // for a
+	}
+    } // loop over modes
+
+      for (a = 0; a < VIM; a++)
+	{
+	  for (b=0; b < VIM; b++)
+	    {
+	      if (a <= b)
+		{
+		  local_post[LOGC_TOTAL_STRESS + index] = S_tot[a][b];
+		  local_lumped[LOGC_TOTAL_STRESS + index] = 1.; 
+		  index++;
+		}
+	    } // for b
+        } // for a
+      
+  } // LOGC_TOTAL_STRESS
+
+  
   if (USER_POST != -1) {
       /* calculate a user-specified post-processing variable */
       
@@ -6609,6 +6672,7 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "Error ZZ heat flux", &ERROR_ZZ_Q);
   iread = look_for_post_proc(ifp, "Error ZZ pressure", &ERROR_ZZ_P);
   iread = look_for_post_proc(ifp, "Map Log-Conf Stress", &LOG_CONF_MAP);
+  iread = look_for_post_proc(ifp, "Logc Total Stress", &LOGC_TOTAL_STRESS);
   iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
 
   /*
@@ -9316,6 +9380,29 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
       LOG_CONF_MAP = -1;
     }
 
+    if (LOGC_TOTAL_STRESS != -1 && Num_Var_In_Type[POLYMER_STRESS11])
+    {
+      LOGC_TOTAL_STRESS = index_post;
+      set_nv_tkud(rd, index, 0, 0, -2, "TMS11","[1]",
+                  "total logc stress xx", FALSE);
+      index++;
+      index_post++;
+      set_nv_tkud(rd, index, 0, 0, -2, "TMS12","[1]",
+                  "total logc stress xy", FALSE);
+
+      index++;
+      index_post++;
+      set_nv_tkud(rd, index, 0, 0, -2, "TMS22","[1]",
+                  "total logc stress yy", FALSE);
+      index++;
+      index_post++;
+    }
+  else
+    {
+      LOGC_TOTAL_STRESS = -1;
+    }
+    
+    
   /*
    * Porous flow post-processing setup section
    */
