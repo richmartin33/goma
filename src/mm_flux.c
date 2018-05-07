@@ -151,6 +151,10 @@ evaluate_flux(
   CONDUCTIVITY_DEPENDENCE_STRUCT d_wnum_struct; 
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_wnum = &d_wnum_struct;
 
+  struct Species_Conservation_Terms s_terms;
+  struct Petrov_Galerkin_Data pg_data;
+
+  
   dbl dkdT[MDE];			/* Temperature derivative of electrical conductivity. */
   dbl dkdV[MDE];			/* Potential derivative of electrical conductivity. */
   dbl dkdC[MAX_CONC][MDE];		/* Concentration derivative of electrical conductivity. */
@@ -265,6 +269,24 @@ evaluate_flux(
   /* load eqn and variable number in tensor form */
   err = stress_eqn_pointer(v_s);
 
+  /* Initialize the Species_Conservation_Terms */
+
+  zero_structure(&s_terms, sizeof(struct Species_Conservation_Terms), 1);
+
+  /* 
+   * set element size variable to zero if not used -- just to be safe 
+   */
+
+  memset( pg_data.h,          0, sizeof(double)*DIM);
+  memset( pg_data.hh,         0, sizeof(double)*DIM*DIM);
+  memset( pg_data.dh_dxnode,  0, sizeof(double)*MDE*DIM);
+  memset( pg_data.hsquared,   0, sizeof(double)*DIM);
+  memset( pg_data.hhv,        0, sizeof(double)*DIM*DIM);
+  memset( pg_data.dhv_dxnode, 0, sizeof(double)*MDE*DIM);
+  memset( pg_data.v_avg,      0, sizeof(double)*DIM);
+  memset( pg_data.dv_dnode,   0, sizeof(double)*MDE*DIM);
+  pg_data.mu_avg = 0.;
+  pg_data.rho_avg = 0.;
 
   af->Assemble_Jacobian = TRUE;
   /* first right time stamp or run stamp to separate the sets */
@@ -1141,12 +1163,19 @@ evaluate_flux(
 	                    }
 	                else  if ( cr->MassFluxModel == DARCY )
 	                    { /* diffusion induced convection is zero */ }
+			else  if ( cr->MassFluxModel == HYDRODYNAMIC )
+			  {
+			    h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode, pd->e[R_MESH1]);
+			    err = get_continuous_species_terms(&s_terms, time_value, tran->theta, delta_t,
+							       pg_data.hsquared);
+                            EH(err,"problem in getting the species terms");
+			    local_q += fv->snormal[a] * s_terms.diff_flux[species_id][a];
+			  }
 	                else
 	                    { EH( -1, "Unimplemented mass flux constitutive relation."); }
                           local_qconv += (fv->snormal[a]*(fv->v[a]-x_dot[a])
                                          *fv->c[species_id] );
                         }
-                          local_qconv = 0;
                           local_flux +=  weight*det*local_q;
                           local_flux_conv += weight*det*local_qconv;
 		      break;
