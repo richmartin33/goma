@@ -136,6 +136,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
   VARIABLE_DESCRIPTION_STRUCT *vd;
   double surface_centroid[DIM]; 
   int interface_id = -1;
+  int ytotalflux_sic = 0;
 
   tran->time_value = time_intermediate;
 
@@ -1336,9 +1337,16 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
 	case YTOTALFLUX_CONST_BC:  /*  RSL 6/7/00  */
+	  //case YTOTALFLUX_SIC_BC:
 	  if (iapply) {
+	    //ytotalflux_sic = 0;
+	    //if (bc->BC_Name == YTOTALFLUX_SIC_BC)
+	    //  {
+	    //	ytotalflux_sic = 1;
+	    //  }
 	    const_mass_flux_surf_bc(func, d_func, bc->BC_Data_Int[0],
-				    bc->BC_Data_Float[0], time_value, delta_t, theta);
+				    bc->BC_Data_Float[0], time_value, delta_t, theta,1);
+				    //ytotalflux_sic);
 	  }
 	  break;
 	    

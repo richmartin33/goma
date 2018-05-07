@@ -370,7 +370,8 @@ PROTO((double [],         /* func                                      */
        double ,           /* const_mass_flux - specified flux          */
        dbl ,              /* time  - current value of the time         */
        dbl ,              /* dt - current value of the time step       */
-       dbl ));            /* tt - parameter to vary time integration   */
+       dbl ,              /* tt - parameter to vary time integration   */
+       int ));             /* ytotalflux_sic - integer = 1 if strongly integrated */
 
 EXTERN void mass_flux_BV2_surf_bc       /* mm_fill_species.c - RSL 5/28/02 */
 PROTO((double [],         /* func                                      */

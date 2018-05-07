@@ -6034,8 +6034,9 @@ const_mass_flux_surf_bc(
 		  double const_mass_flux, /* specified flux       */
 		  double time,  /* current value of the time                 */
 		  dbl dt,	/* current value of the time step            */
-		  dbl tt)	/* parameter to vary time integration        */
-
+		  dbl tt,	/* parameter to vary time integration        */
+                  int ytotalflux_sic)  /* Equals 1 for strongly integrated condition */
+		  
 /*****************************************************************************
 *
 *  Function which calculates the surface integral for a constant
@@ -6053,7 +6054,8 @@ const_mass_flux_surf_bc(
 *
 ******************************************************************************/
 {
-  int j, j_id, w1, dim, kdir, var, jvar;
+  int j, j_id, w1, dim, var, jvar;
+  int kdir = 0;
   double phi_j;
   double Y_w; /* local concentration of current species */
   double vconv[MAX_PDIM]; /*Calculated convection velocity */
@@ -6064,9 +6066,32 @@ const_mass_flux_surf_bc(
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;  /* density dependence */
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
   int err = 0;
+  struct Species_Conservation_Terms s_terms;
+  struct Petrov_Galerkin_Data pg_data;
  
   /***************************** EXECUTION BEGINS ****************************/
- 
+
+  /*
+   *  Initialize the Species_Conservation_Terms temporary structure
+   *  before filling it up
+   */
+  zero_structure(&s_terms, sizeof(struct Species_Conservation_Terms), 1);
+
+  /*
+   * set element size variable to zero if not used -- just to be safe
+   */
+
+  memset( pg_data.h,          0, sizeof(double)*DIM);
+  memset( pg_data.hh,         0, sizeof(double)*DIM*DIM);
+  memset( pg_data.dh_dxnode,  0, sizeof(double)*MDE*DIM);
+  memset( pg_data.hsquared,   0, sizeof(double)*DIM);
+  memset( pg_data.hhv,        0, sizeof(double)*DIM*DIM);
+  memset( pg_data.dhv_dxnode, 0, sizeof(double)*MDE*DIM);
+  memset( pg_data.v_avg,      0, sizeof(double)*DIM);
+  memset( pg_data.dv_dnode,   0, sizeof(double)*MDE*DIM);
+  pg_data.mu_avg = 0.;
+  pg_data.rho_avg = 0.;
+  
   /* calculate concentration to be used in the convective flux; this is the
    * actual total molar concentration if molar fluxes are being used, but
    * simply unity if volume fluxes are being used.
@@ -6119,6 +6144,13 @@ const_mass_flux_surf_bc(
     /* Calculate the residual contribution from convective flux */
     for (kdir = 0; kdir < dim; kdir++) {
       *func += c * Y_w * vconv[kdir] * fv->snormal[kdir];
+      if(ytotalflux_sic)
+  	{
+  	  h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode, pd->e[R_MESH1]);
+          err = get_continuous_species_terms(&s_terms, time, tt, dt, pg_data.hsquared);
+          EH(err,"problem in getting the species terms");
+  	  *func += fv->snormal[kdir]*s_terms.diff_flux[wspec][kdir];
+  	}
     }
   }
 
@@ -6143,6 +6175,11 @@ const_mass_flux_surf_bc(
         for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++ ) {
           d_func[0][MAX_VARIABLE_TYPES + w1][j_id] +=
               c*Y_w*d_vconv->C[kdir][w1][j_id] * fv->snormal[kdir];
+  	  if(ytotalflux_sic)
+  	    {
+  	      d_func[0][MAX_VARIABLE_TYPES + w1][j_id] +=
+  		s_terms.d_diff_flux_dc[wspec][kdir][w1][j_id] * fv->snormal[kdir];
+  	    }
         }
       }
     }
@@ -6160,6 +6197,11 @@ const_mass_flux_surf_bc(
         for(kdir=0; kdir<dim; kdir++)  {
           d_func[0][var][j_id]  +=
               c*Y_w*d_vconv->T[kdir][j_id] * fv->snormal[kdir];
+  	  if(ytotalflux_sic)
+  	    {
+  	      d_func[0][var][j_id] +=
+  		s_terms.d_diff_flux_dT[wspec][kdir][j_id];
+  	    }
         }
       }
     }
@@ -6179,6 +6221,12 @@ const_mass_flux_surf_bc(
             d_func[0][var][j_id] += c*(
                 Y_w*vconv[kdir]*fv->dsnormal_dx[kdir][jvar][j_id] +
                 Y_w*d_vconv->X[kdir][jvar][j_id]*fv->snormal[kdir]);
+  	    if(ytotalflux_sic)
+  	      {
+  		d_func[0][var][j_id] +=
+  		  s_terms.d_diff_flux_dmesh[wspec][kdir][jvar][j_id]*fv->snormal[kdir] +
+  		  s_terms.diff_flux[wspec][kdir]*fv->dsnormal_dx[kdir][jvar][j_id];
+  	      }
           }
         }
       }
@@ -6191,6 +6239,11 @@ const_mass_flux_surf_bc(
           phi_j = bf[var]->phi[j_id];
           d_func[0][var][j_id] +=
               c*Y_w*d_vconv->v[jvar][jvar][j_id]*fv->snormal[jvar];
+  	  if(ytotalflux_sic)
+  	    {
+  	      d_func[0][var][j_id] +=
+  		s_terms.d_diff_flux_dv[wspec][kdir][jvar][j_id]*fv->snormal[jvar];
+  	    }
         }
       }
     }
