@@ -1337,16 +1337,16 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
 	case YTOTALFLUX_CONST_BC:  /*  RSL 6/7/00  */
-	  //case YTOTALFLUX_SIC_BC:
+	case YTOTALFLUX_SIC_BC:
 	  if (iapply) {
-	    //ytotalflux_sic = 0;
-	    //if (bc->BC_Name == YTOTALFLUX_SIC_BC)
-	    //  {
-	    //	ytotalflux_sic = 1;
-	    //  }
+	    ytotalflux_sic = 0;
+	    if (bc->BC_Name == YTOTALFLUX_SIC_BC)
+	      {
+	    	ytotalflux_sic = 1;
+	      }
 	    const_mass_flux_surf_bc(func, d_func, bc->BC_Data_Int[0],
-				    bc->BC_Data_Float[0], time_value, delta_t, theta,1);
-				    //ytotalflux_sic);
+				    bc->BC_Data_Float[0], time_value, delta_t, theta,
+				    ytotalflux_sic);
 	  }
 	  break;
 	    
