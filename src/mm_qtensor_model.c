@@ -774,6 +774,15 @@ assemble_vorticity_direction()
       return(status);
     }
 
+  for(a=0; a < DIM; a++)
+    {
+      for (b=0; b < DIM; b++)
+	{
+	  gamma_dot[a][b] = 0.;
+	  gamma_dot_pert[a][b] = 0.;
+	}
+    }
+  
   dim = pd->Num_Dim;
   WIM  = dim;
   if (pd->CoordinateSystem == SWIRLING ||
@@ -816,13 +825,12 @@ assemble_vorticity_direction()
 	{
 	  for( b=0; b<VIM; b++)
 	    {
-	      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
-	      
+	      gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];	      
 	    }
 	}
       
       /* Get local vorticity direction for least squares projection*/
-      for ( a=0; a<VIM; a++)
+      for ( a=0; a<DIM; a++)
 	{
 	  vort_dir_local[a] = 0.0;
 	  vort_dir[a] = 0.;
@@ -2566,15 +2574,31 @@ find_super_special_eigenvector(dbl T[DIM][DIM],
 			       int print)
 {
   int num_zero_eigenvalues;
+  int i,j;
   dbl A[3][3];
   dbl a0, a2, a1;
   dbl q, r, d, m, theta, z1, z2, z3;
+  dbl eig1=0.,eig2=0.,eig3=0.;
+  dbl v1[DIM],v2[DIM],v3[DIM];
 
   memset(v, 0, DIM * sizeof(dbl));
+  memset(v1, 0, DIM * sizeof(dbl));
+  memset(v2, 0, DIM * sizeof(dbl));
+  memset(v3, 0, DIM * sizeof(dbl));
+  
   *eigenvalue = 0.0;
 
+  memset(A, 0, 9 * sizeof(dbl));
+  for (i=0; i < DIM; i++)
+    {
+      for (j=0; j < DIM; j++)
+	{
+	  A[i][j] = T[i][j];
+	}
+    }
+
   /* First, get a copy of the shear rate tensor. */
-  memcpy(A, T, DIM * DIM * sizeof(dbl));
+  //memcpy(A, T, DIM * DIM * sizeof(dbl));
 
   /* Now find the zeros of the cubic polynomial characteristic
    * equation.  This requires some complex number mumbo-jubmo, which I
@@ -2661,45 +2685,65 @@ find_super_special_eigenvector(dbl T[DIM][DIM],
     {
       /* Good, there must be a "largest" and "smallest" eigenvalue. */
       if(z1 > z2)
-	if(z2 > z3)
-	  { 
-	    /* z3 < z2 < z1 */
-	    find_eigenvector(A, z2, v, print);
-	    *eigenvalue = z2;
-	  }
-	else
-	  if(z3 > z1)
+	{
+	  if(z2 > z3)
+	    { 
+	      /* z3 < z2 < z1 */
+	      find_eigenvector(A, z2, v, print);
+	      *eigenvalue = z2;
+	      eig1 = z3;
+	      eig2 = z2;
+	      eig3 = z1;
+	    }
+	  else if(z3 > z1)
 	    {
 	      /* z2 < z1 < z3 */
 	      find_eigenvector(A, z1, v, print);
 	      *eigenvalue = z1;
+	      eig1 = z2;
+	      eig2 = z1;
+	      eig3 = z3;
 	    }
 	  else
 	    {
 	      /* z2 < z3 < z1 */
 	      find_eigenvector(A, z3, v, print);
 	      *eigenvalue = z3;
+	      eig1 = z2;
+	      eig2 = z3;
+	      eig3 = z1;
 	    }
-      else
-	if(z2 > z3)
+	}
+      else if(z2 > z3)
+	{
 	  if(z3 > z1)
 	    {
 	      /* z1 < z3 < z2 */
 	      find_eigenvector(A, z3, v, print);
 	      *eigenvalue = z3;
+	      eig1 = z1;
+	      eig2 = z3;
+	      eig3 = z2;
 	    }
 	  else
 	    {
 	      /* z3 < z1 < z2 */
 	      find_eigenvector(A, z1, v, print);
 	      *eigenvalue = z1;
+	      eig1 = z3;
+	      eig2 = z1;
+	      eig3 = z2;
 	    }
-	else
-	  {
-	    /* z1 < z2 < z3 */
-	    find_eigenvector(A, z2, v, print);
-	    *eigenvalue = z2;
-	  }
+	}
+      else
+	{
+	  /* z1 < z2 < z3 */
+	  find_eigenvector(A, z2, v, print);
+	  *eigenvalue = z2;
+	  eig1 = z1;
+	  eig2 = z2;
+          eig3 = z3;
+	}
 
       if(print)
 	{
@@ -2712,6 +2756,13 @@ find_super_special_eigenvector(dbl T[DIM][DIM],
     {
       /* At least 2 zeros => all 3 are zero (symmetry) */
     }
+  find_eigenvector(A, eig1, v1, print);
+  find_eigenvector(A, eig2, v2, print);
+  find_eigenvector(A, eig3, v3, print);
+  /* Try to catch some roundoff errors. */
+  if(fabs(v[0]) < QTENSOR_SMALL_DBL) v[0] = 0.0;
+  if(fabs(v[1]) < QTENSOR_SMALL_DBL) v[1] = 0.0;
+  if(fabs(v[2]) < QTENSOR_SMALL_DBL) v[2] = 0.0;
 }
 
 /* This routine diagonalizes a symmetric 2-tensor of size 3 by 3.

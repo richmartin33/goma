@@ -2763,7 +2763,7 @@ assemble_momentum(dbl time,       /* current time */
   phi_i_vector = bfm->phi;
   checkFinite(phi_i_vector[0]);
 #endif
-
+  
   /*
    * Calculate the momentum stress tensor at the current gauss point
    */
@@ -3580,40 +3580,40 @@ assemble_momentum(dbl time,       /* current time */
 	      /*
 	       * J_m_vd
 	       */
-	      if( pdv[VORT_DIR1] ) {
-		for ( b=0; b<DIM; b++)
-		  {
-		    var = VORT_DIR1+b;
-		    if ( pdv[var] )
-		      {
-			pvar = upd->vp[var];
-			for ( j=0; j<ei->dof[var]; j++)
-			  {
+	      if( pdv[VORT_DIR1] ) { 
+	      	for ( b=0; b<DIM; b++)
+	      	  {
+	      	    var = VORT_DIR1+b;
+	      	    if ( pdv[var] )
+	      	      {
+	      		pvar = upd->vp[var];
+	      		for ( j=0; j<ei->dof[var]; j++)
+	      		  {
 						  
-			    phi_j = bf[var]->phi[j];
+	      		    phi_j = bf[var]->phi[j];
 						  
-			    diffusion = 0.;
-			    if ( pd->e[eqn] & T_DIFFUSION )
-			      {
+	      		    diffusion = 0.;
+	      		    if ( pd->e[eqn] & T_DIFFUSION )
+	      		      {
 							  
-				for ( p=0; p<VIM; p++)
-				  {
-				    for ( q=0; q<VIM; q++)
-				      {
-					diffusion += grad_phi_i_e_a[p][q] *
-					  d_Pi->vd[q][p][b][j];
-				      }
-				  }
-				diffusion *= -det_J * wt;
-				diffusion *= h3;
-				diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
-			      }
+	      			for ( p=0; p<VIM; p++)
+	      			  {
+	      			    for ( q=0; q<VIM; q++)
+	      			      {
+	      				diffusion += grad_phi_i_e_a[p][q] *
+	      				  d_Pi->vd[q][p][b][j];
+	      			      }
+	      			  }
+	      			diffusion *= -det_J * wt;
+	      			diffusion *= h3;
+	      			diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+	      		      }
 						  
-			    lec->J[peqn][pvar][ii][j] +=
-			      diffusion;
-			  }
-		      }
-		  }
+	      		    lec->J[peqn][pvar][ii][j] +=
+	      		      diffusion;
+	      		  }
+	      	      }
+	      	  }
 	      }
 
 	      /*
@@ -28169,6 +28169,7 @@ fluid_stress( double Pi[DIM][DIM],
   // Vorticity direction dependence for qtensor
   if ( d_Pi != NULL && pd->v[VORT_DIR1] )
     {
+      memset(d_Pi->vd, 0, DIM*DIM*DIM*MDE*sizeof(double));
       for ( p=0; p<VIM; p++)
         {
           for ( q=0; q<VIM; q++)
@@ -28814,6 +28815,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
   var = VORT_DIR1;
   if(d_Pi!=NULL && pd->v[var])
     {
+      memset(d_Pi->vd, 0, DIM*DIM*DIM*MDE*sizeof(double));
       for(p=0; p<VIM; p++)
         {
           for(q=0; q<VIM; q++)
