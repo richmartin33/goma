@@ -106,6 +106,16 @@ PROTO((struct Species_Conservation_Terms *, /* st                            */
        dbl ,                    /* time step                                 */
        const dbl [DIM]));       /* element size                              */
 
+EXTERN int leo_diffusion_equation(struct Species_Conservation_Terms *,  /* mm_std_models.c,  st      */
+				  int ,                                 /* w - species number        */
+				  dbl ,                                 /* time step parameter       */
+				  dbl);                                 /* time step                 */
+
+EXTERN void NPdiffusiontensor(double ,              /* mm_std_models.c, RBC concentration   */
+			      double ,              /* shear rate                           */
+			      double [],            /* Diffusion tensor                     */
+			      double [DIM][DIM]);   /* dD_dc                                */
+			      
 EXTERN int hydro_flux_NP		/* mm_std_models.c                   */
 PROTO((struct Species_Conservation_Terms *, /* st                            */
        int ));  			/* w - species number                */
@@ -176,6 +186,11 @@ PROTO((double ,			/* t - present value of time                 */
        int ));			/* print - key for printing:                 *
 				 * print = 1: printing;                      *
 				 * print = 0: no printing.                   */
+
+EXTERN void rotate_tensor (double [DIM][DIM],              /* mm_std_models.c, A           */
+			   double [DIM][DIM],              /* A_prime (rotated tensor)     */
+		           double [DIM][DIM],              /* R (orthogonal matrix)        */
+			   int);                  /* dir = 0 or dir = 1, rotation direction */
 
 EXTERN int assemble_suspension_temperature /* mm_std_models.c */
 PROTO((dbl,                     /* time */

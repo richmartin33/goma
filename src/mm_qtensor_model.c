@@ -171,6 +171,11 @@ assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales */
   dbl gd_delta = 0.0;
   dbl *h;
   dbl *hq[DIM];
+  dbl v1[DIM],v2[DIM], v3[DIM];
+
+  memset(v1, 0, sizeof(dbl)*DIM);
+  memset(v2, 0, sizeof(dbl)*DIM);
+  memset(v3, 0, sizeof(dbl)*DIM);
 
   print = 0;
   /*
@@ -209,7 +214,7 @@ assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales */
 	  printf("E = | % 10.4g % 10.4g % 10.4g |\n", E[1][0], E[1][1], E[1][2]);
 	  printf("    + % 10.4g % 10.4g % 10.4g +\n", E[2][0], E[2][1], E[2][2]);
 	  } */
-      find_super_special_eigenvector(E, vort_dir_local, &tmp, print);
+      find_super_special_eigenvector(E, vort_dir_local, v1, v2, v3, &tmp, print);
 
       for(i = 0; i < DIM; i++) {
         memset( d_vort_dir_d_x[i], 0, DIM * sizeof(dbl) );
@@ -243,7 +248,7 @@ assemble_qtensor(dbl *el_length) /* 2 x approximate element length scales */
 	    for(j = 0; j < DIM; j++)
 	      E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
 
-          find_super_special_eigenvector(E, vort_dir_delta, &tmp, print);
+          find_super_special_eigenvector(E, vort_dir_delta, v1, v2, v3, &tmp, print);
 
 	  /*
 	  gd_delta = 0.0;
@@ -353,7 +358,12 @@ assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length scales *
   dbl gd_delta = 0.0;
   dbl *h;
   dbl *hq[DIM];
+  dbl v1[DIM], v2[DIM], v3[DIM];
 
+  memset(v1, 0, sizeof(dbl)*DIM);
+  memset(v2, 0, sizeof(dbl)*DIM);
+  memset(v3, 0, sizeof(dbl)*DIM);
+  
   print = 0;
 
   for(i = 0; i < DIM; i++) {
@@ -387,7 +397,7 @@ assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length scales *
 	  printf("E = | % 10.4g % 10.4g % 10.4g |\n", E[1][0], E[1][1], E[1][2]);
 	  printf("    + % 10.4g % 10.4g % 10.4g +\n", E[2][0], E[2][1], E[2][2]);
 	  }*/
-      find_super_special_eigenvector(E, vort_dir_local, &tmp, print);
+      find_super_special_eigenvector(E, vort_dir_local, v1, v2, v3, &tmp, print);
 
       for(i = 0; i < DIM; i++) {
         memset( d_vort_dir_d_x[i], 0, DIM * sizeof(dbl) );
@@ -421,7 +431,7 @@ assemble_qtensor_vort(dbl *el_length) /* 2 x approximate element length scales *
 	    for(j = 0; j < DIM; j++)
 	      E[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
 
-          find_super_special_eigenvector(E, vort_dir_delta, &tmp, print);
+          find_super_special_eigenvector(E, vort_dir_delta, v1, v2, v3, &tmp, print);
 
 	  /*
 	  gd_delta = 0.0;
@@ -767,6 +777,7 @@ assemble_vorticity_direction()
   dbl xcoor[DIM][MDE], hh3, h[DIM], hq[DIM][DIM], radius, theta;
   dbl grad_e[DIM][DIM][DIM];
   dbl detJ1, det_J_inv;
+  dbl v1[DIM],v2[DIM],v3[DIM];
   
   
   if ( ! pd->e[eqn = R_VORT_DIR1] )
@@ -782,6 +793,10 @@ assemble_vorticity_direction()
 	  gamma_dot_pert[a][b] = 0.;
 	}
     }
+
+  memset(v1, 0, sizeof(dbl)*DIM);
+  memset(v2, 0, sizeof(dbl)*DIM);
+  memset(v3, 0, sizeof(dbl)*DIM);
   
   dim = pd->Num_Dim;
   WIM  = dim;
@@ -837,7 +852,7 @@ assemble_vorticity_direction()
 	}
       vort_dir[0] = 1.;
 
-      find_super_special_eigenvector(gamma_dot, vort_dir_local, &tmp, print); 
+      find_super_special_eigenvector(gamma_dot, vort_dir_local, v1, v2, v3, &tmp, print); 
       
       bias_eigenvector_to(vort_dir_local, vort_dir);
       memset(R_old, 0, sizeof(double)*DIM*MDE);
@@ -966,7 +981,8 @@ assemble_vorticity_direction()
 	      /* Get local vorticity direction for least squares projection*/
 	      for ( p=0; p<VIM; p++ )
 		vort_dir_pert[p] = vort_dir_local[p];
-	      find_super_special_eigenvector(gamma_dot_pert, vort_dir_pert, &tmp, print);
+	      find_super_special_eigenvector(gamma_dot_pert, vort_dir_pert, v1, v2,
+					     v3, &tmp, print);
 	      bias_eigenvector_to(vort_dir_pert, vort_dir);
 	      
 	      memset(R_new, 0, sizeof(double)*DIM*MDE);
@@ -1210,7 +1226,8 @@ assemble_vorticity_direction()
 		/* Get local vorticity direction for least squares projection*/
 		for ( p=0; p<VIM; p++ )
 		  vort_dir_pert[p] = vort_dir_local[p];
-		find_super_special_eigenvector(gamma_dot_pert, vort_dir_pert, &tmp, print);
+		find_super_special_eigenvector(gamma_dot_pert, vort_dir_pert, v1, v2, v3,
+					       &tmp, print);
 		bias_eigenvector_to(vort_dir_pert, vort_dir);
 		
 		memset(R_new, 0, sizeof(double)*DIM*MDE);
@@ -2570,6 +2587,9 @@ find_eigenvector(dbl AA[3][3],
 void
 find_super_special_eigenvector(dbl T[DIM][DIM],
 			       dbl *v,
+			       dbl *v1,
+			       dbl *v2,
+			       dbl *v3,
 			       dbl *eigenvalue,
 			       int print)
 {
@@ -2579,7 +2599,6 @@ find_super_special_eigenvector(dbl T[DIM][DIM],
   dbl a0, a2, a1;
   dbl q, r, d, m, theta, z1, z2, z3;
   dbl eig1=0.,eig2=0.,eig3=0.;
-  dbl v1[DIM],v2[DIM],v3[DIM];
 
   memset(v, 0, DIM * sizeof(dbl));
   memset(v1, 0, DIM * sizeof(dbl));

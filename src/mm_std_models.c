@@ -3896,6 +3896,307 @@ hydro_flux(struct Species_Conservation_Terms *st,
   return(status);
 }
 
+
+int
+leo_diffusion_equation(struct Species_Conservation_Terms *st,
+	   int w,                      /* species number */
+	   double tt,	/* parameter to vary time integration from
+			   explicit (tt = 1) to implicit (tt = 0) */
+	   double dt)	/* current time step size */
+
+{
+  int a, b, j, p, var;
+  int status=1;
+  int dim;
+  dbl tmp;
+  int print=0;
+  dbl gammadot, gamma_dot[DIM][DIM];
+  dbl R[DIM][DIM];
+  dbl sqrt_2;
+  
+  dbl *Y, (*grad_Y)[DIM];
+
+  dbl c_term = 0.0, d_term = 0.0;
+
+  dbl v1[DIM],v2[DIM],v3[DIM];
+  dbl v_cross[DIM];
+  dbl D_prime[DIM][DIM];
+  dbl D_rot[DIM][DIM];
+  dbl dD_dc2[DIM][DIM];
+
+  dbl D[DIM][DIM];
+  dbl vort_dir[DIM];
+
+  memset(v1, 0, DIM*sizeof(dbl));
+  memset(v2, 0, DIM*sizeof(dbl));
+  memset(v3, 0, DIM*sizeof(dbl));
+  memset(v_cross, 0, DIM*sizeof(dbl));
+
+  memset(dD_dc2, 0, DIM*DIM*sizeof(dbl));
+  memset(D_prime, 0, DIM*DIM*sizeof(dbl));
+  memset(D_rot, 0, DIM*DIM*sizeof(dbl));
+
+  memset(D, 0, DIM*DIM*sizeof(dbl));
+  memset(vort_dir, 0, DIM*sizeof(dbl));
+  
+  /* Set up some convenient local variables and pointers */
+
+  Y = fv->c;
+  grad_Y = fv->grad_c;
+  gammadot = fv->SH;
+
+  dim = pd->Num_Dim;
+  
+  memset(gamma_dot, 0, DIM*DIM*sizeof(dbl) );
+  
+  for( a=0; a<VIM; a++ )
+    {
+    for( b=0; b<VIM; b++)
+      {
+	gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+      }
+    }
+
+  /* assemble residual */
+
+  /* NP diffusion tensor based on particle approach */
+  /* Author: Z. Liu "Leo" 07/17/2018 */
+      
+  double Dtensor[4]; for(j=0;j<4;j++) Dtensor[j]=0;
+  double dD_dc[3][3];
+  for (a=0; a < 3; a++)
+    {
+      for (b=0; b < 3; b++)
+	{
+	  dD_dc[a][b] = 0.;
+	}
+    }
+  
+  NPdiffusiontensor(Y[w], gammadot, Dtensor, dD_dc);
+
+  D[0][0] = Dtensor[0];
+  D[1][1] = Dtensor[1];
+  D[2][2] = Dtensor[2];
+  D[0][1] = Dtensor[3];
+  D[1][0] = Dtensor[3];
+  
+  /* Eigenvectors for simple shear flow */
+  /* Arranged so that lambda_1 < lambda_2 < lambda_3  */
+  sqrt_2 = sqrt(2.);
+  v1[0] = -1./sqrt_2;
+  v1[1] = 1./sqrt_2;
+  v1[2] = 0.;
+
+  v2[0] = 0.;
+  v2[1] = 0.;
+  v2[2] = 1.;
+
+  v3[0] = 1./sqrt_2;
+  v3[1] = 1./sqrt_2;
+  v3[2] = 0.;
+
+  memset(R, 0, DIM*DIM*sizeof(dbl));
+
+  for (a=0; a < DIM; a++)
+    {
+      R[a][0] = v1[a];
+      R[a][1] = v2[a];
+      R[a][2] = v3[a];
+    }
+
+  rotate_tensor(D, D_prime, R, 1);
+  rotate_tensor(dD_dc, dD_dc2, R, 1);
+  
+  /* Find the eigenvectors of gamma_dot to transform the Dtensor */
+
+  find_super_special_eigenvector(gamma_dot, vort_dir, v1, v2, v3, &tmp, print);
+
+  /* Make sure they're oriented correctly */
+
+  v_cross[0] = v3[1]*v1[2] - v3[2]*v1[1];
+  v_cross[1] = v3[2]*v1[0] - v3[0]*v1[2];
+  v_cross[2] = v3[0]*v1[1] - v3[1]*v1[0];
+
+  if (fabs(v_cross[0] - v2[0]) > 1.e-10 ||
+      fabs(v_cross[1] - v2[1]) > 1.e-10 ||
+      fabs(v_cross[2] - v2[2]) > 1.e-10)
+    {
+      for (a=0; a < 3; a++)
+	{
+	  v1[a] = -v1[a];
+	}
+    }
+  
+  /* Rotate into principal shear direction */
+  memset(R, 0, DIM*DIM*sizeof(dbl));
+  for (a=0; a < DIM; a++)
+    {
+      R[a][0] = v1[a];
+      R[a][1] = v2[a];
+      R[a][2] = v3[a];
+    }
+
+  rotate_tensor(D_prime, D_rot, R, 0);
+  rotate_tensor(dD_dc2, dD_dc, R, 0);
+  
+  for (a=0; a < DIM; a++)
+    {
+      st->diff_flux[w][a] = 0.;
+      for (b=0; b < DIM; b++)
+	{
+	  st->diff_flux[w][a] += D_rot[a][b] * grad_Y[w][b];
+	}
+    }
+   
+  for(a=0; a<dim; a++) st->diff_flux[w][a] *= 1/0.7; //Victor JFM 1998  
+
+  if (af->Assemble_Jacobian)
+    {
+      /* Derivative with respect to concentration */
+
+      var = MASS_FRACTION;
+
+      for ( j=0; j<ei->dof[var]; j++)
+	{
+	  for ( a=0; a<dim && pd->v[var]; a++)
+	    {
+
+	      d_term = 0.;
+	      for (b=0; b < DIM; b++)
+		{
+		  d_term += dD_dc[a][b] * grad_Y[w][b];
+		  }
+
+	      c_term = 0.;
+	      for (b=0; b < DIM; b++)
+		{
+		  c_term += D_rot[a][b] * bf[var]->grad_phi[j][b];
+		}
+	      
+	      st->d_diff_flux_dc[w][a] [w][j] = d_term + c_term;
+	    }
+	}
+            
+      var = SHEAR_RATE;
+      
+      for( a=0; a<dim && pd->v[var]; a++)
+	{
+	  for( j=0; j<ei->dof[var];j++)
+	    {
+	      
+	      c_term = 1.;
+
+	      st->d_diff_flux_dSH[w][a][j] = c_term;
+	    }
+	}
+  
+      /* Compute velocity derivatives of normal acceleration
+	 vector, the velocity norm.  Did not observe any
+	 anomalies, but the Jacobian is slightly off when
+	 debug=-2 */ 
+      
+      
+      var = VELOCITY1;
+      memset(st->d_diff_flux_dv, 0, MAX_CONC*DIM*DIM*MDE*sizeof(dbl));
+	  
+      if(pd->v[var])
+	{
+	  for ( j=0; j<ei->dof[var]; j++)
+	    {
+	      for ( a=0; a<dim && pd->v[var]; a++)
+		{
+		  d_term = 1.;
+		  st->d_diff_flux_dv[w][a] [a][j] = d_term;
+		}
+	    }
+	}
+
+
+      var = MESH_DISPLACEMENT1;
+      
+      if(pd->v[var])
+	{
+	  for ( a=0; a<dim; a++)
+	    {
+	      for( p=0; p<dim; p++)
+		{
+		  for( j=0;  j<ei->dof[var]; j++)
+		    
+		    {
+		      c_term  = 1.;
+		      
+		      st->d_diff_flux_dmesh[w][a][p][j] = c_term;
+		    }
+		}
+	    }
+	}
+    }
+
+  return(status);
+}
+
+/********************************************************************                                                            
+*                                                                                                                                
+* NP diffusion tensor directly characterized                                                                                     
+* based on the RBC-NP scale model developed by Leo at Georgia Tech                                                               
+*                                                                                                                                
+* Author: Z. Liu  "Leo"   07/17/2018                                                                                             
+*                                                                                                                                
+********************************************************************/
+void NPdiffusiontensor(double hematocrit, double SR, double Dtensor[], double dD_dc[DIM][DIM])
+{
+  // units: g, mm, s
+  int i;
+  double G = 6.3e-3;  //dynes/cm or g/s^2
+  double Temp = 310; //K
+  double kB = 1.38e-14; //mm^2 g /k s^2
+  double PIvalue = 3.1415926;
+  double mu = 1.2e-3; //g/mm/s
+  double a_NP = 50e-6;   //mm  100nm
+  double a_RBC = 2900e-6; //mm  2.9um
+  double D_B = 0.0;
+  //double D_RBC = 0.0;
+  double Ht2Cap = 0.0;
+  double phiga2 = hematocrit * SR * a_RBC * a_RBC;
+  double g_a2 = SR * a_RBC * a_RBC;
+
+  D_B = kB * Temp / (6 * PIvalue * mu * a_NP);
+  double Cconst[8];
+  Cconst[0] = 0.26;
+  Cconst[1] = 4.2;
+  Cconst[2] = 0.031;
+  Cconst[3] = 0.022;
+  Cconst[4] = 0.024;
+  Cconst[5] = 0.011;
+  Cconst[6] = 0.;
+  Cconst[7] = 0.033;
+
+  //Dxx:D[0],Dyy:D[1],Dzz:D[2],Dxy:D[3]
+  if (SR <= 100) {
+    Dtensor[0] = Cconst[0] * phiga2;
+    Dtensor[1] = Cconst[2] * phiga2;
+    Dtensor[2] = Cconst[4] * phiga2;
+    Dtensor[3] = Cconst[6] * phiga2;
+    for (i=0;i<3;i++) Dtensor[i] += D_B;
+
+    dD_dc[0][0] = Cconst[0] * g_a2;
+    dD_dc[1][1] = Cconst[2] * g_a2;
+    dD_dc[2][2] = Cconst[4] * g_a2;
+    dD_dc[0][1] = Cconst[6] * g_a2;
+    dD_dc[1][0] = dD_dc[0][1];
+  }
+  else if (SR > 100) {
+  double Cap = mu * SR * a_RBC / G;
+    Ht2Cap = pow(hematocrit,2)*Cap;
+    Dtensor[0] = Cconst[1] * hematocrit * pow(Cap,2*hematocrit) * phiga2;
+    Dtensor[1] = Cconst[3] * pow(Cap,0.2) * phiga2;
+    if(Ht2Cap != 0) Dtensor[2] = Cconst[5] * pow(Ht2Cap,-0.2) * phiga2;
+    if(Ht2Cap == 0) Dtensor[2] = 0;
+    Dtensor[3] = -1.0 * Cconst[7] * phiga2;
+    for(i=0;i<3;i++) Dtensor[i] += D_B;
+  }
+}
+
 /******************************************************************************
 *
 *  Function that computes the "diffusive" mass flux resulting from 
@@ -4734,6 +5035,13 @@ particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress */
   dbl d_qtensor_dvd[DIM][DIM][DIM][MDE];
   dbl vort_dir_local[DIM], tmp;
   int print=0;
+  dbl v1[DIM];
+  dbl v2[DIM];
+  dbl v3[DIM];
+
+  memset(v1, 0, DIM*sizeof(dbl));
+  memset(v2, 0, DIM*sizeof(dbl));
+  memset(v3, 0, DIM*sizeof(dbl));
   
   Y = fv->c;
   dim = pd->Num_Dim;
@@ -4820,7 +5128,7 @@ particle_stress(dbl tau_p[DIM][DIM],                     /* particle stress */
 	{
 	  vort_dir_local[a] = 0.0;
 	}
-      find_super_special_eigenvector(gamma_dot, vort_dir_local, &tmp, print);
+      find_super_special_eigenvector(gamma_dot, vort_dir_local, v1, v2, v3, &tmp, print);
       
       for ( a=0; a<VIM; a++)
 	{
@@ -5049,6 +5357,13 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
   dbl maxpack, maxpack2, Kn;
   dbl pp,  d_pp_dy, d_pp2_dy2;
   dbl comp, comp1, comp2 = 0, y_norm;
+
+  dbl v1[DIM],v2[DIM],v3[DIM];
+
+  memset(v1, 0, DIM*sizeof(dbl));
+  memset(v2, 0, DIM*sizeof(dbl));
+  memset(v3, 0, DIM*sizeof(dbl));
+
   Y = fv->c;
   grad_Y = fv->grad_c;
   grad_gd = fv->grad_SH;
@@ -5096,7 +5411,7 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
 	{
 	  vort_dir_local[a] = 0.0;
 	}
-      find_super_special_eigenvector(gamma_dot, vort_dir_local, &tmp, print);
+      find_super_special_eigenvector(gamma_dot, vort_dir_local, v1, v2, v3, &tmp, print);
       
       for ( a=0; a<VIM; a++)
 	{
@@ -6472,6 +6787,90 @@ electrolyte_temperature (double t,         /* present value of time */
 /*****************************************************************************/
 /* END of routine electrolyte_temperature                                    */
 /*****************************************************************************/
+
+void rotate_tensor(double A[DIM][DIM], double A_prime[DIM][DIM],
+		   double R0[DIM][DIM], int dir)
+{
+  
+  /* Rotates a tensor from A to A_prime using the orthogonal tensor R */
+  /* dir = 0 : A_prime = R * A * Rt */
+  /* dir = 1 : A_prime = Rt * A * R */
+
+  double R[DIM][DIM];
+  double Rt[DIM][DIM];
+  double R_tmp[DIM][DIM];
+  double R_dot_A[DIM][DIM];
+  int i,j,k;
+
+  memset(R, 0, sizeof(dbl)*DIM*DIM);
+  memset(R_tmp, 0, sizeof(dbl)*DIM*DIM);
+  memset(A_prime, 0, sizeof(dbl)*DIM*DIM);
+  memset(R_dot_A, 0, sizeof(dbl)*DIM*DIM);
+
+  for (i=0; i < DIM; i++)
+    {
+      for (j=0; j < DIM; j++)
+	{
+	  R[i][j] = R0[i][j];
+	}
+    }
+  
+  if (dir == 1)
+    {
+      for (i=0; i < DIM; i++)
+	{
+	  for (j=0; j < DIM; j++)
+	    {
+	      R_tmp[i][j] = R[i][j];
+	      Rt[i][j] = R[i][j];
+	    }
+	}
+      for (i=0; i < DIM; i++)
+	{
+	  for (j=0; j < DIM; j++)
+	    {
+	      R[i][j] = R_tmp[j][i];
+	    }
+	}
+    }
+  else
+    {
+      for (i=0; i < DIM; i++)
+	{
+	  for (j=0; j < DIM; j++)
+	    {
+	      Rt[i][j] = R[j][i];
+	    }
+	}
+    }
+
+  for (i=0; i < DIM; i++)
+    {
+      for (j=0; j < DIM; j++)
+	{
+	  R_dot_A[i][j] = 0;
+	  for (k=0; k < DIM; k++)
+	    {
+	      R_dot_A[i][j] += R[i][k] * A[k][j];
+	    }
+	}
+    }
+
+  for (i=0; i < DIM; i++)
+    {
+      for (j=0; j < DIM; j++)
+	{
+	  A_prime[i][j] = 0;
+	  for (k=0; k < DIM; k++)
+	    {
+	      A_prime[i][j] += R_dot_A[i][k] * Rt[k][j];
+	    }
+	}
+    }
+      
+}
+
+
 
 /*  _______________________________________________________________________  */
 

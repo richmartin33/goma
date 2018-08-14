@@ -675,7 +675,7 @@ matrix_fill(
           WH( -1, "Negative subelement volume detected.");
 	  neg_elem_volume = FALSE;
 #endif
-#if 1
+ #if 1
           /* Squawk then fail timestep. */
           fprintf(stderr,"Negative subelement volume in element (%d)!\n", ielem+1);
           return -1;

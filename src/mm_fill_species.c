@@ -10079,7 +10079,14 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
             cr->MassFluxModel == STEFAN_MAXWELL_VOLUME)  
     { 
       err = Stefan_Maxwell_diff_flux(st, time, dt);
-    } 
+    }
+  else if ( cr->MassFluxModel == LEO_DIFFUSION )
+    {
+      for ( w=0; w<pd->Num_Species_Eqn; w++)
+	{
+	  err = leo_diffusion_equation(st, w, tt, dt);
+	}
+    }
   else if ( cr->MassFluxModel == HYDRODYNAMIC 
 	    || cr->MassFluxModel == HYDRODYNAMIC_QTENSOR 
 	    || cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD)

@@ -395,6 +395,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS];	/* number of variables to overwri
 #define POWERLAW_DARCY_FICKIAN	20 /*PRS for P&G */
 #define HYDRODYNAMIC_QTENSOR    21
 #define HYDRODYNAMIC_QTENSOR_OLD    22
+#define LEO_DIFFUSION    23
 
 
 /* surface tension laws */

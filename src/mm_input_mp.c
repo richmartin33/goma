@@ -5608,6 +5608,12 @@ ECHO("\n----Acoustic Properties\n", echo_file);
 	{
 	  DiffusionConstitutiveEquation = DARCY_FICKIAN;
 	}
+      else if ( !strcmp(model_name, "LEO_DIFFUSION") )
+	{
+	  DiffusionConstitutiveEquation = LEO_DIFFUSION;
+	  if( !pd_glob[mn]->e[R_SHEAR_RATE] )
+	    EH(-1, "LEO_DIFFUSION mass flux requires shear_rate dof in EQ list.");
+	}
       else if ( !strcmp(model_name, "HYDRODYNAMIC") )
 	{
 	  DiffusionConstitutiveEquation = HYDRODYNAMIC;
