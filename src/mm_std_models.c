@@ -5507,11 +5507,6 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
 	  qtensor[a][a] = mp->u_qdiffusivity[w][a];
 	  div_qtensor[a]=0.;
 	}
-      // TEST ------------------
-      /*qtensor[0][0] = 1.;
-      qtensor[1][1] = 1.;
-      qtensor[2][2] = 0.5;*/
-      // END TEST
       memset(d_div_q_dmesh, 0, DIM*DIM*MDE*sizeof(dbl));
       memset(d_div_q_dvd, 0, DIM*DIM*MDE*sizeof(dbl));
       memset(d_qtensor_dvd, 0, DIM*DIM*DIM*MDE*sizeof(dbl));
@@ -5541,7 +5536,7 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
     {
       comp = pow((1.-y_norm),-2.);
       comp1 = 2./maxpack*pow((1.-y_norm),-3.);
-      comp2 = -6.0/maxpack2*pow((1.-y_norm),-4.);
+      comp2 = 6.0/maxpack2*pow((1.-y_norm),-4.);
     }
   else
     {
