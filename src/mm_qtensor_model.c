@@ -1886,32 +1886,32 @@ hydro_qtensor_flux_new (struct Species_Conservation_Terms *st,
    */
 
 
-  /*for ( a=0; a<VIM; a++)
+  for ( a=0; a<VIM; a++)
     {
       for ( b=0; b<VIM; b++)
 	{
 	  qtensor_loc[a][b] = (dbl)delta(a,b) -
 	    0.5 * fv->vd[a] * fv->vd[b];
 	}
-	}*/
+    }
 
   /* assume a diagonal Q tensor */
-  memset(qtensor_loc,  0, DIM*DIM*sizeof(dbl) );
+  /*memset(qtensor_loc,  0, DIM*DIM*sizeof(dbl) );
   for ( a=0; a<DIM; a++)
     {
       qtensor_loc[a][a] = mp->q_diffusivity[w][a];
       div_q[a]=0.;
-    }
+      }*/
   
   // memset(div_q, 0, DIM*sizeof(dbl));
-  /*for ( a=0; a<VIM; a++)
+  for ( a=0; a<VIM; a++)
     {
       div_q[a] = -0.5*fv->vd[a]*fv->div_vd;
       for ( b=0; b<VIM; b++)
 	{
 	  div_q[a] -= 0.5*fv->vd[b] * fv->grad_vd[b][a];
 	}
-	}*/
+    }
  
 
   memset(grad_Y_VQVt, 0, DIM*sizeof(dbl));

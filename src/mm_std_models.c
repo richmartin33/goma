@@ -4784,8 +4784,6 @@ suspension_balance(struct Species_Conservation_Terms *st,
       st->diff_flux[w][a] = -M*div_tau_p[a];
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
-
-      st->diff_flux[w][a] = -M*div_tau_p[a];
     }
   
   if (af->Assemble_Jacobian)
