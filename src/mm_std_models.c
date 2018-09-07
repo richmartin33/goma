@@ -3863,9 +3863,9 @@ suspension_balance(struct Species_Conservation_Terms *st,
   
   dim = pd->Num_Dim;
   h = 0.85 - fv->x[1];
-  if ( h < 1.e-4 )
+  if ( h < 0.05 )
     {
-      h = 1.e-4;
+      h = 0.05;
     }
   
   /* Compute gamma_dot[][] */
@@ -4002,12 +4002,9 @@ suspension_balance(struct Species_Conservation_Terms *st,
   for ( a=0; a<dim; a++)
     {
       st->diff_flux[w][a] = -M*div_tau_p[a];
-      if ( a == 1 )
+      if ( a == 1 && h < 0.7)
 	{
-	  if ( h < 0.7 )
-	    {
-	      st->diff_flux[w][a] -= M * lift_coeff;
-	    }
+	  st->diff_flux[w][a] -= M * lift_coeff;
 	}
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
@@ -4084,8 +4081,6 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      
 	      c_term = -M*d_div_tau_p_dgd[a][j];
 
-	      if (a == 1 && h < 0.7) c_term -= M * d_lift_dgd;
-
 	      st->d_diff_flux_dSH[w][a] [j] = c_term;
 	    }
 	}
@@ -4121,7 +4116,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
 
 		      if (a == 1 && h < 0.7)
 			{
-			  c_term -= M * d_lift_dgd * d_gd_dv[a][j];
+			  c_term -= M * d_lift_dgd * d_gd_dv[p][j];
 			}
 		      
 		      mu_term = 0.;
