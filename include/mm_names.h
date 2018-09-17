@@ -1022,6 +1022,15 @@ struct Equation_Names EQ_Name[] = {
     { "R_LIGHT_INTD", "LIGHT_INTD", R_LIGHT_INTD},  /*   184  */
     { "R_TFMP_MASS", "TFMP_MASS", R_TFMP_MASS},     /*   185  */
     { "R_TFMP_BOUND", "TFMP_BOUND", R_TFMP_BOUND},     /*   186  */
+    { "R_PARTICLE_STRESS11", "PARTICLE_STRESS11", R_PARTICLE_STRESS11},  /*  187  */
+    { "R_PARTICLE_STRESS12", "PARTICLE_STRESS12", R_PARTICLE_STRESS12},
+    { "R_PARTICLE_STRESS13", "PARTICLE_STRESS13", R_PARTICLE_STRESS13},
+    { "R_PARTICLE_STRESS21", "PARTICLE_STRESS21", R_PARTICLE_STRESS21},  /*  190  */
+    { "R_PARTICLE_STRESS22", "PARTICLE_STRESS22", R_PARTICLE_STRESS22},
+    { "R_PARTICLE_STRESS23", "PARTICLE_STRESS23", R_PARTICLE_STRESS23},
+    { "R_PARTICLE_STRESS31", "PARTICLE_STRESS31", R_PARTICLE_STRESS31},
+    { "R_PARTICLE_STRESS32", "PARTICLE_STRESS32", R_PARTICLE_STRESS32},
+    { "R_PARTICLE_STRESS33", "PARTICLE_STRESS33", R_PARTICLE_STRESS33},  /*  195  */
 
     /*
      *  Note -> these entries must remain until we get rid
@@ -1297,8 +1306,19 @@ struct Equation_Names Var_Name[] =  {
     { "TFMP_SAT", "SAT", TFMP_SAT},                     /* 185 */
     { "TFMP_PRES", "PRES", TFMP_PRES},                     /* 186 */
 
+    { "PARTICLE_STRESS11", "PS11", PARTICLE_STRESS11},  /*  187  */
+    { "PARTICLE_STRESS12", "PS12", PARTICLE_STRESS12},
+    { "PARTICLE_STRESS13", "PS13", PARTICLE_STRESS13},
+    { "PARTICLE_STRESS21", "PS21", PARTICLE_STRESS21},  /*  190  */
+    { "PARTICLE_STRESS22", "PS22", PARTICLE_STRESS22},
+    { "PARTICLE_STRESS23", "PS23", PARTICLE_STRESS23},
+    { "PARTICLE_STRESS31", "PS31", PARTICLE_STRESS31},
+    { "PARTICLE_STRESS32", "PS32", PARTICLE_STRESS32},
+    { "PARTICLE_STRESS33", "PS33", PARTICLE_STRESS33},  /*  195  */
+
+    
     { "MESH_POSITION1", "X",  MESH_POSITION1 } ,
-    { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 188 */
+    { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 197 */
     { "MESH_POSITION3", "Z",  MESH_POSITION3 } ,
 
     { "VEL_NORM",       "VN", VEL_NORM } ,
@@ -1312,14 +1332,14 @@ struct Equation_Names Var_Name[] =  {
 
     { "D_X1_DT",   "XDOT", D_X1_DT } ,
     { "D_X2_DT",   "YDOT", D_X2_DT } ,
-    { "D_X3_DT",   "ZDOT", D_X3_DT } ,			/* 199 */
+    { "D_X3_DT",   "ZDOT", D_X3_DT } ,			/* 208 */
     { "D_S_DT",    "SDOT", D_S_DT } ,
 
     { "D_P_DT",    "PDOT", D_P_DT } ,
 
     { "SOLID_POSITION1", "X_RS",  SOLID_POSITION1 } ,  
     { "SOLID_POSITION2", "Y_RS",  SOLID_POSITION2 } ,
-    { "SOLID_POSITION3", "Z_RS",  SOLID_POSITION3 } 	/* 204 */
+    { "SOLID_POSITION3", "Z_RS",  SOLID_POSITION3 } 	/* 213 */
 };
 
 int Num_Var_Names = sizeof(Var_Name) / sizeof(struct Equation_Names);  
@@ -1540,6 +1560,15 @@ struct Equation_Names Exo_Var_Names[] =
   { "Dispersive Scattering Intensity", "INTD", LIGHT_INTD },
   { "Thin Film Multiphase Lubrication Pressure", "TFMP_PRES", TFMP_PRES },
   { "Thin Film Multiphase Saturation", "TFMP_SAT", TFMP_SAT },
+  { "Particle Stress component 11", "PS11", PARTICLE_STRESS11},
+  { "Particle Stress component 12", "PS12", PARTICLE_STRESS12},
+  { "Particle Stress component 13", "PS13", PARTICLE_STRESS13},
+  { "Particle Stress component 21", "PS21", PARTICLE_STRESS21},
+  { "Particle Stress component 22", "PS22", PARTICLE_STRESS22},
+  { "Particle Stress component 23", "PS23", PARTICLE_STRESS23},
+  { "Particle Stress component 31", "PS31", PARTICLE_STRESS31},
+  { "Particle Stress component 32", "PS32", PARTICLE_STRESS32},
+  { "Particle Stress component 33", "PS33", PARTICLE_STRESS33},
 };
 
 int Num_Exo_Var_Names = sizeof(Exo_Var_Names) / sizeof(struct Equation_Names);  
@@ -1809,6 +1838,15 @@ struct Equation_Names Var_Units[] =
   { "Dispersive Intensity", "[1]", LIGHT_INTD},
   { "Thin Film Multiphase Lubrication Pressure", "[1]", TFMP_PRES},
   { "Thin Film Multiphase Saturation", "[1]", TFMP_SAT},
+  { "Particle Stress component 11", "[1]", PARTICLE_STRESS11},
+  { "Particle Stress component 12", "[1]", PARTICLE_STRESS12},
+  { "Particle Stress component 13", "[1]", PARTICLE_STRESS13},
+  { "Particle Stress component 21", "[1]", PARTICLE_STRESS21},
+  { "Particle Stress component 22", "[1]", PARTICLE_STRESS22},
+  { "Particle Stress component 23", "[1]", PARTICLE_STRESS23},
+  { "Particle Stress component 31", "[1]", PARTICLE_STRESS31},
+  { "Particle Stress component 32", "[1]", PARTICLE_STRESS32},
+  { "Particle Stress component 33", "[1]", PARTICLE_STRESS33},
 };
 
 int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);  

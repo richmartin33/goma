@@ -1310,6 +1310,7 @@ load_elem_dofptr(const int ielem,
   int status;
   int k;
   int R_s[MAX_MODES][DIM][DIM], R_g[DIM][DIM];
+  int R_ps[DIM][DIM];
   struct Level_Set_Data *ls_old;
 
 #ifdef DEBUG
@@ -1336,6 +1337,16 @@ load_elem_dofptr(const int ielem,
   R_g[2][1] = R_GRADIENT32; 
   R_g[2][2] = R_GRADIENT33; 
 
+  R_ps[0][0] = R_PARTICLE_STRESS11;
+  R_ps[0][1] = R_PARTICLE_STRESS12;
+  R_ps[1][0] = R_PARTICLE_STRESS21;
+  R_ps[1][1] = R_PARTICLE_STRESS22;
+  R_ps[0][2] = R_PARTICLE_STRESS13;
+  R_ps[1][2] = R_PARTICLE_STRESS23;
+  R_ps[2][0] = R_PARTICLE_STRESS31;
+  R_ps[2][1] = R_PARTICLE_STRESS32;
+  R_ps[2][2] = R_PARTICLE_STRESS33;
+  
   /*
    * Count how many dofs/node for each kind of variable...
    */
@@ -1990,6 +2001,29 @@ load_elem_dofptr(const int ielem,
     }
   }
 
+  eqn = R_PARTICLE_STRESS11;
+  if (upd->ep[eqn] >= 0) {
+    /* This should loop through all the particle stress 
+     * components of the tensor
+     */
+    for (b = 0; b < VIM; b++) {
+      for (c = 0; c < VIM; c++) {
+	eqn = R_ps[b][c];
+	if (upd->ep[eqn] >= 0) {
+	  load_varType_Interpolation_ptrs(eqn, esp->PS[b][c],
+					  esp_old->PS[b][c], esp_dot->PS[b][c]);
+        } else {
+	  dofs = ei->dof[R_PARTICLE_STRESS11];
+	  for (i = 0; i < dofs; i++) {
+	    esp->PS[b][c][i]       = p0;
+	    esp_old->PS[b][c][i]   = p0;
+	    esp_dot->PS[b][c][i]   = p0;
+	  }
+	}
+      }
+    }
+  }
+  
   eqn = R_POR_LIQ_PRES;
   if ( upd->ep[eqn] >= 0 )
     {

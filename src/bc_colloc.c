@@ -2858,6 +2858,60 @@ load_variable (double *x_var,        /* variable value */
       *d_x_var = 1.;
       break;
 
+    case PARTICLE_STRESS11:
+      *x_var = fv->PS[0][0];
+      var = PARTICLE_STRESS11;
+      *d_x_var = 1.;
+      break;
+
+    case PARTICLE_STRESS12:
+      *x_var = fv->PS[0][1];
+      var = PARTICLE_STRESS12;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS13:
+      *x_var = fv->PS[0][2];
+      var = PARTICLE_STRESS13;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS21:
+      *x_var = fv->PS[1][0];
+      var = PARTICLE_STRESS21;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS22:
+      *x_var = fv->PS[1][1];
+      var = PARTICLE_STRESS22;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS23:
+      *x_var = fv->PS[1][2];
+      var = PARTICLE_STRESS23;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS31:
+      *x_var = fv->PS[2][0];
+      var = PARTICLE_STRESS31;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS32:
+      *x_var = fv->PS[2][1];
+      var = PARTICLE_STRESS32;
+      *d_x_var = 1.;
+      break;
+      
+    case PARTICLE_STRESS33:
+      *x_var = fv->PS[2][2];
+      var = PARTICLE_STRESS33;
+      *d_x_var = 1.;
+      break;
+
     case PHASE1:
     case PHASE2:
     case PHASE3:

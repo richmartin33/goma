@@ -1464,6 +1464,25 @@ set_interaction_masks(Exo_DB *exo)
 	  v = VELOCITY_GRADIENT33;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 
+	  v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  
 	  v = VOLTAGE;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = POR_LIQ_PRES;
@@ -1697,6 +1716,25 @@ set_interaction_masks(Exo_DB *exo)
 	  v = VELOCITY_GRADIENT33;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 
+	  v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  
 	  break;
 
 	case R_MESH1:
@@ -1767,6 +1805,24 @@ set_interaction_masks(Exo_DB *exo)
 	  v = VELOCITY_GRADIENT32;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = VELOCITY_GRADIENT33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = POLYMER_STRESS11;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
@@ -2111,6 +2167,24 @@ set_interaction_masks(Exo_DB *exo)
 	  v = VELOCITY_GRADIENT32;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = VELOCITY_GRADIENT33;
+          v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = SHEAR_RATE;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
@@ -2176,6 +2250,25 @@ set_interaction_masks(Exo_DB *exo)
 	  v = VELOCITY_GRADIENT33;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 
+	  v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+
 	  v = SHEAR_RATE;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = FILL;
@@ -2221,6 +2314,93 @@ set_interaction_masks(Exo_DB *exo)
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  v = VELOCITY_GRADIENT33;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;	  
+	  break;
+
+	case R_PARTICLE_STRESS11:
+	case R_PARTICLE_STRESS12:
+	case R_PARTICLE_STRESS13:
+	case R_PARTICLE_STRESS21:
+	case R_PARTICLE_STRESS22:
+	case R_PARTICLE_STRESS23:
+	case R_PARTICLE_STRESS31:
+	case R_PARTICLE_STRESS32:
+	case R_PARTICLE_STRESS33:
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MESH_DISPLACEMENT1;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MESH_DISPLACEMENT2;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MESH_DISPLACEMENT3;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = TEMPERATURE;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = MASS_FRACTION;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PRESSURE;
+          if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v =SHEAR_RATE;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = VELOCITY_GRADIENT33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;	  
 	  break;
 
 
@@ -3761,6 +3941,24 @@ set_interaction_masks(Exo_DB *exo)
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
           v = POR_SATURATION;
 	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;  
+          v = PARTICLE_STRESS11;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS12;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS13;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS21;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS22;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS23;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS31;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS32;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+	  v = PARTICLE_STRESS33;
+	  if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
 	  break;
  
 	}

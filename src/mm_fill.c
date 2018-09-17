@@ -1556,6 +1556,16 @@ matrix_fill(
 #endif
 	}
 
+      if (pde[R_PARTICLE_STRESS11])
+	{
+	  err = assemble_particle_stress(theta, delta_t);
+	  EH(err, "assemble_particle_stress");
+#ifdef CHECK_FINITE
+	  err = CHECKFINITE("assemble_particle_stress"); 
+	  if (err) return -1;
+#endif
+	}
+      
       if (pde[R_MESH1] && !pde[R_SHELL_CURVATURE] && !pde[R_SHELL_TENSION])
 	{
 	  err = assemble_mesh(time_value, theta, delta_t, ielem, ip, ip_total);

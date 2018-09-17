@@ -8452,6 +8452,24 @@ rd_eq_specs(FILE *ifp,
       ce = set_eqn(R_GRADIENT32, pd_ptr);
     } else if (!strcasecmp(ts, "gradient33")) {
       ce = set_eqn(R_GRADIENT33, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress11")) {
+      ce = set_eqn(R_PARTICLE_STRESS11, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress12")) {
+      ce = set_eqn(R_PARTICLE_STRESS12, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress13")) {
+      ce = set_eqn(R_PARTICLE_STRESS13, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress21")) {
+      ce = set_eqn(R_PARTICLE_STRESS21, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress22")) {
+      ce = set_eqn(R_PARTICLE_STRESS22, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress23")) {
+      ce = set_eqn(R_PARTICLE_STRESS23, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress31")) {
+      ce = set_eqn(R_PARTICLE_STRESS31, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress32")) {
+      ce = set_eqn(R_PARTICLE_STRESS32, pd_ptr);
+    } else if (!strcasecmp(ts, "particle_stress33")) {
+      ce = set_eqn(R_PARTICLE_STRESS33, pd_ptr);
     } else if (!strcasecmp(ts, "bond")) {
       ce = set_eqn(R_BOND_EVOLUTION, pd_ptr);
     } else if (!strcasecmp(ts, "species_bulk")) {
@@ -9076,6 +9094,24 @@ rd_eq_specs(FILE *ifp,
       cv = set_var(VELOCITY_GRADIENT32, pd_ptr);
     } else if (!strcasecmp(ts, "G33")) {
       cv = set_var(VELOCITY_GRADIENT33, pd_ptr);
+    } else if (!strcasecmp(ts, "PS11")) {
+      cv = set_var(PARTICLE_STRESS11, pd_ptr);
+    } else if (!strcasecmp(ts, "PS12")) {
+      cv = set_var(PARTICLE_STRESS12, pd_ptr);
+    } else if (!strcasecmp(ts, "PS13")) {
+      cv = set_var(PARTICLE_STRESS13, pd_ptr);
+    } else if (!strcasecmp(ts, "PS21")) {
+      cv = set_var(PARTICLE_STRESS21, pd_ptr);
+    } else if (!strcasecmp(ts, "PS22")) {
+      cv = set_var(PARTICLE_STRESS22, pd_ptr);
+    } else if (!strcasecmp(ts, "PS23")) {
+      cv = set_var(PARTICLE_STRESS23, pd_ptr);
+    } else if (!strcasecmp(ts, "PS31")) {
+      cv = set_var(PARTICLE_STRESS31, pd_ptr);
+    } else if (!strcasecmp(ts, "PS32")) {
+      cv = set_var(PARTICLE_STRESS32, pd_ptr);
+    } else if (!strcasecmp(ts, "PS33")) {
+      cv = set_var(PARTICLE_STRESS33, pd_ptr);
     } else if (!strcasecmp(ts, "NN")) {
       cv = set_var(BOND_EVOLUTION, pd_ptr);
     } else if (!strcasecmp(ts, "Y")) {
@@ -9635,6 +9671,15 @@ rd_eq_specs(FILE *ifp,
     case R_SHELL_SHEAR_TOP:
     case R_SHELL_SHEAR_BOT:
     case R_SHELL_CROSS_SHEAR:
+    case R_PARTICLE_STRESS11:
+    case R_PARTICLE_STRESS12:
+    case R_PARTICLE_STRESS13:
+    case R_PARTICLE_STRESS21:
+    case R_PARTICLE_STRESS22:
+    case R_PARTICLE_STRESS23:
+    case R_PARTICLE_STRESS31:
+    case R_PARTICLE_STRESS32:
+    case R_PARTICLE_STRESS33:
 
 	if ( fscanf(ifp, "%lf %lf", 
 		    &(pd_ptr->etm[ce][(LOG2_ADVECTION)]),

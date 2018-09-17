@@ -337,6 +337,16 @@ variable_string_to_int(const char *input, const char *err_string)
   else if (!strcmp(input,"VELOCITY_GRADIENT31"))          var = VELOCITY_GRADIENT31;
   else if (!strcmp(input,"VELOCITY_GRADIENT32"))          var = VELOCITY_GRADIENT32;
   else if (!strcmp(input,"VELOCITY_GRADIENT33"))          var = VELOCITY_GRADIENT33;
+
+  else if (!strcmp(input,"PARTICLE_STRESS11"))            var = PARTICLE_STRESS11;
+  else if (!strcmp(input,"PARTICLE_STRESS12"))            var = PARTICLE_STRESS12;
+  else if (!strcmp(input,"PARTICLE_STRESS13"))            var = PARTICLE_STRESS13;
+  else if (!strcmp(input,"PARTICLE_STRESS21"))            var = PARTICLE_STRESS21;
+  else if (!strcmp(input,"PARTICLE_STRESS22"))            var = PARTICLE_STRESS22;
+  else if (!strcmp(input,"PARTICLE_STRESS23"))            var = PARTICLE_STRESS23;
+  else if (!strcmp(input,"PARTICLE_STRESS31"))            var = PARTICLE_STRESS31;
+  else if (!strcmp(input,"PARTICLE_STRESS32"))            var = PARTICLE_STRESS32;
+  else if (!strcmp(input,"PARTICLE_STRESS33"))            var = PARTICLE_STRESS33;
   
   else if (!strcmp(input, "VOLTAGE"))                     var = VOLTAGE;
   else if (!strcmp(input, "FILL"))                        var = FILL;

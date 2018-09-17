@@ -445,6 +445,17 @@
 #define LIGHT_INTD            184 /*  Light Intensity - Scattering Dispersion-RBS*/
 #define TFMP_SAT              185 /*  Thin-Film Multi-Phase Saturation */
 #define TFMP_PRES             186 /*  Thin-Film Multi-Phase Lubrication Pressure */
+
+#define PARTICLE_STRESS11     187 /* aka Sigma_p_11, 11 of the particle stress */
+#define PARTICLE_STRESS12     188 /* aka Sigma_p_12, 12 of the particle stress */
+#define PARTICLE_STRESS13     189 /* aka Sigma_p_13, 13 of the particle stress */
+#define PARTICLE_STRESS21     190 /* aka Sigma_p_21, 21 of the particle stress */
+#define PARTICLE_STRESS22     191 /* aka Sigma_p_22, 22 of the particle stress */
+#define PARTICLE_STRESS23     192 /* aka Sigma_p_23, 23 of the particle stress */
+#define PARTICLE_STRESS31     193 /* aka Sigma_p_31, 31 of the particle stress */
+#define PARTICLE_STRESS32     194 /* aka Sigma_p_32, 32 of the particle stress */
+#define PARTICLE_STRESS33     195 /* aka Sigma_p_33, 33 of the particle stress */
+
 /*
  * define a variable to hold an external field which will be 
  * held fixed in the problem but parametered by the basis functions
@@ -805,7 +816,16 @@
 #define R_LIGHT_INTD            184 /*  Light Intensity - Scattering Dispersion*/
 #define R_TFMP_MASS             185 /*  Thin-Film Multi-Phase Mass Equation */
 #define R_TFMP_BOUND            186 /*  Thin-Film Multi-Phase Boundary Motion Equation */
-#define V_LAST		        187
+#define R_PARTICLE_STRESS11     187 /* aka Sigma_p_11, 11 of the particle stress */
+#define R_PARTICLE_STRESS12     188 /* aka Sigma_p_12, 12 of the particle stress */
+#define R_PARTICLE_STRESS13     189 /* aka Sigma_p_13, 13 of the particle stress */
+#define R_PARTICLE_STRESS21     190 /* aka Sigma_p_21, 21 of the particle stress */
+#define R_PARTICLE_STRESS22     191 /* aka Sigma_p_22, 22 of the particle stress */
+#define R_PARTICLE_STRESS23     192 /* aka Sigma_p_23, 23 of the particle stress */
+#define R_PARTICLE_STRESS31     193 /* aka Sigma_p_31, 31 of the particle stress */
+#define R_PARTICLE_STRESS32     194 /* aka Sigma_p_32, 32 of the particle stress */
+#define R_PARTICLE_STRESS33     195 /* aka Sigma_p_33, 33 of the particle stress */
+#define V_LAST		        196
 
 
 /* MMH

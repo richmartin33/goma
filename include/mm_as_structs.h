@@ -466,6 +466,7 @@ struct Element_Variable_Pointers
   dbl *P[MDE];					/* pressure */
   dbl *S[MAX_MODES][DIM][DIM][MDE];	        /* polymeric stress tensor, for each mode */
   dbl *G[DIM][DIM][MDE];	                /* velocity gradient tensor */
+  dbl *PS[DIM][DIM][MDE];	                /* particle stress tensor */
   dbl *F[MDE];					/* Fill */
   dbl *V[MDE];                                  /* Potential; added by KSC: 2/3/99 */
   dbl *qs[MDE];                                 /* Surface charge density */
@@ -571,6 +572,7 @@ struct Element_Stiffness_Pointers
 				    stress tensor */
   dbl ****G;	                 /* *G[DIM][DIM][MDE], velocity gradient
 				    tensor */
+  dbl ****PS;                    /* *PS[DIM][DIM][MDE], particle stress tensor */
   dbl **V;		 	 /* *V[MDE], voltage potential */
   dbl **qs;                      /* *qs[MDE], surface charge density */
   dbl **F;			 /* *F[MDE], fill */
@@ -1521,6 +1523,7 @@ struct Field_Variables
   dbl P;			/* Pressure. */
   dbl S[MAX_MODES][DIM][DIM];   /* Polymer Stress, for each mode */
   dbl G[DIM][DIM];              /* Velocity Gradient */
+  dbl PS[DIM][DIM];             /* Particle Stress Tensor */
   dbl F;			/* Fill */
   dbl V;			/* Voltage */
   dbl qs;                       /* Surface charge density (shell element) */
@@ -1671,6 +1674,9 @@ struct Field_Variables
   dbl grad_G[DIM][DIM][DIM];	/* Gradient of velocity tensor ( or most of it!) */
   dbl div_G[DIM];	        /* Divergence of velocity gradient tensor */
   dbl div_Gt[DIM];	        /* Divergence of the transpose of velocity gradient tensor */
+
+  dbl grad_PS[DIM][DIM][DIM];   /* Gradient of particle stress tensor    */
+  dbl div_PS[DIM];              /* Divergence of particle stress tensor  */
 
   dbl grad_n_dot_curl_s_v[DIM];   /* This is the normal gradient of a scalar field defined on a shell. 
                                      The scalar field is n dot curl_s v 
@@ -1868,6 +1874,7 @@ struct Diet_Field_Variables
   dbl n[DIM];                   /* normal vector to level set field OR shell normal */
   dbl S[MAX_MODES][DIM][DIM];   /* Polymer Stress, for each modes */
   dbl G[DIM][DIM];              /* Velocity Gradient */
+  dbl PS[DIM][DIM];              /* Particle Stress Tensor */
   dbl nn;		        /* This is the bond evolution */
   dbl p_liq;	        	/* porous media liq-pressure variable. */
   dbl p_gas;	        	/* porous media gas-pressure variable. */

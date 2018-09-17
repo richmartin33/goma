@@ -1057,6 +1057,12 @@ assembly_alloc(Exo_DB *exo)
     (void) memset(esp->G[0][0], 0, vim*vim*MDE*sizeof(dbl *)); 
   }
 
+  /* PARTICLE_STRESS */
+  if (Num_Var_In_Type[PARTICLE_STRESS11]) {
+    esp->PS = (dbl ****) array_alloc(3, vim, vim, MDE, sizeof(dbl *));
+    (void) memset(esp->PS[0][0], 0, vim*vim*MDE*sizeof(dbl *)); 
+  }
+  
   /* POTENTIAL */
   if (Num_Var_In_Type[VOLTAGE]) {
     esp->V = (dbl **) alloc_ptr_1(MDE);

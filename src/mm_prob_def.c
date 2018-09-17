@@ -149,6 +149,15 @@ setup_pd()
 	     (ce == R_GRADIENT31) ||
 	     (ce == R_GRADIENT32) ||
 	     (ce == R_GRADIENT33) ||
+	     (ce == R_PARTICLE_STRESS11) ||
+	     (ce == R_PARTICLE_STRESS12) ||
+	     (ce == R_PARTICLE_STRESS13) ||
+	     (ce == R_PARTICLE_STRESS21) ||
+	     (ce == R_PARTICLE_STRESS22) ||
+	     (ce == R_PARTICLE_STRESS23) ||
+	     (ce == R_PARTICLE_STRESS31) ||
+	     (ce == R_PARTICLE_STRESS32) ||
+	     (ce == R_PARTICLE_STRESS33) ||
 	     (ce == R_EFIELD1)    ||
 	     (ce == R_EFIELD2)    ||
 	     (ce == R_EFIELD3)    ||

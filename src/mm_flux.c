@@ -7863,6 +7863,17 @@ load_fv_sens(void)
     { VELOCITY_GRADIENT31, VELOCITY_GRADIENT32, VELOCITY_GRADIENT33 }
   };
 
+  int v_ps[DIM][DIM];
+  v_ps[0][0] = PARTICLE_STRESS11;
+  v_ps[0][1] = PARTICLE_STRESS12;
+  v_ps[0][2] = PARTICLE_STRESS13;
+  v_ps[1][0] = PARTICLE_STRESS21;
+  v_ps[1][1] = PARTICLE_STRESS22;
+  v_ps[1][2] = PARTICLE_STRESS23;
+  v_ps[2][0] = PARTICLE_STRESS31;
+  v_ps[2][1] = PARTICLE_STRESS32;
+  v_ps[2][2] = PARTICLE_STRESS33;
+
   status = 0;
 
   /* load eqn and variable number in tensor form */
@@ -8629,6 +8640,28 @@ load_fv_sens(void)
 	}
     }
 
+  /*
+   * Particle Stress Tensor
+   */
+  
+  for ( p=0; p<VIM; p++)
+    {
+      for ( q=0; q<VIM; q++)
+	{
+	  fv_sens->PS[p][q] = 0.;
+
+	  v = v_ps[p][q];
+	  if ( pd->v[v] )
+	    {
+	      dofs     = ei->dof[v];
+	      for ( i=0; i<dofs; i++)
+		{
+		  fv_sens->PS[p][q] += *esp_old->PS[p][q][i] * bf[v]->phi[i];
+		}
+	    }
+	}
+    }
+
 	      
   /*
    * Concentration...
@@ -9373,6 +9406,78 @@ load_fv_grads_sens(void)
 	    }
 	}
     }
+
+  
+  
+  /*
+   * grad(PARTICLE_STRESS)
+   */
+  
+  v = PARTICLE_STRESS11;
+  if ( pd->v[v] )
+    {  
+      dofs = ei->dof[v];
+      for ( p=0; p<VIM; p++)
+	{
+	  for ( q=0; q<VIM; q++)
+	    {
+	      for ( r=0; r<VIM; r++)
+		{
+		  fv_sens->grad_PS[r][p][q]=0.;
+		  for ( i=0; i<dofs; i++)
+		    {
+		      fv_sens->grad_PS[r][p][q] += 
+			*esp_old->PS[p][q][i] * bf[v]->grad_phi[i][r];
+		    }
+		}
+	    }
+	}
+      
+      /*
+       * div(PARTICLE_STRESS)
+       */
+      for ( r=0; r<VIM; r++)
+	{
+	  fv_sens->div_PS[r]=0.;  
+	}
+      
+      for ( r=0; r<dim; r++)
+	{
+	  for ( q=0; q<dim; q++)
+	    {
+	      fv_sens->div_PS[r] += 
+		fv_sens->grad_PS[q][q][r];
+	    }
+	}
+      
+      if ( pd->CoordinateSystem != CARTESIAN )
+	{
+	  for ( s=0; s<VIM; s++)
+	    {
+	      for ( r=0; r<VIM; r++)
+		{
+		  for ( p=0; p<VIM; p++)
+		    {
+		      fv_sens->div_PS[s] += 
+			fv_sens->PS[p][s]*fv_sens->grad_e[p][r][s];
+		    }
+		}
+	    }
+	  
+	  for ( s=0; s<VIM; s++)
+	    {
+	      for ( r=0; r<VIM; r++)
+		{
+		  for ( q=0; q<VIM; q++)
+		    { 
+		      fv_sens->div_PS[s] += 
+			fv_sens->PS[r][q]* fv_sens->grad_e[q][r][s] ;
+		    }
+		}
+	    }
+	}
+    }
+
 
   return(status);
 }/*  end of load_fv_grads_sens  */

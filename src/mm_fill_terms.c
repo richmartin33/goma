@@ -7495,6 +7495,7 @@ load_fv(void)
   int mode;
   int status = 0;
   int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
+  int v_ps[DIM][DIM];
   double rho, *stateVector = mp->StateVector;
   BASIS_FUNCTIONS_STRUCT *bfv;
   int transient_run = pd->TimeIntegration != STEADY ;
@@ -7518,6 +7519,18 @@ load_fv(void)
     v_g[2][0] = VELOCITY_GRADIENT31;
     v_g[2][1] = VELOCITY_GRADIENT32; 
     v_g[2][2] = VELOCITY_GRADIENT33; 
+  }
+
+  if( pdv[PARTICLE_STRESS11] ) {
+    v_ps[0][0] = PARTICLE_STRESS11;
+    v_ps[0][1] = PARTICLE_STRESS12;
+    v_ps[1][0] = PARTICLE_STRESS21;
+    v_ps[1][1] = PARTICLE_STRESS22;
+    v_ps[0][2] = PARTICLE_STRESS13;
+    v_ps[1][2] = PARTICLE_STRESS23;
+    v_ps[2][0] = PARTICLE_STRESS31;
+    v_ps[2][1] = PARTICLE_STRESS32;
+    v_ps[2][2] = PARTICLE_STRESS33;
   }
   
   /*
@@ -8538,6 +8551,33 @@ load_fv(void)
 		    {
 		      fv_old->G[p][q] += *esp_old->G[p][q][i] * bf[v]->phi[i];
 		      fv_dot->G[p][q] += *esp_dot->G[p][q][i] * bf[v]->phi[i];
+		    }
+		}
+	    }
+	}
+    }
+
+
+  /*
+   * Particle stress tensor
+   */
+   
+  for ( p=0; pdv[PARTICLE_STRESS11] && p<VIM; p++)
+    {
+      for ( q=0; q<VIM; q++)
+	{
+	  v = v_ps[p][q];
+	  if ( pdv[v] )
+	    {
+	      fv->PS[p][q] = fv_old->PS[p][q] = fv_dot->PS[p][q] = 0.0;
+	      dofs     = ei->dof[v];
+	      for ( i=0; i<dofs; i++)
+		{
+		  fv->PS[p][q] += *esp->PS[p][q][i] * bf[v]->phi[i];
+		  if ( pd->TimeIntegration != STEADY )
+		    {
+		      fv_old->PS[p][q] += *esp_old->PS[p][q][i] * bf[v]->phi[i];
+		      fv_dot->PS[p][q] += *esp_dot->PS[p][q][i] * bf[v]->phi[i];
 		    }
 		}
 	    }
@@ -10125,7 +10165,85 @@ load_fv_grads(void)
 		  }
 	  }
   }
+
+  /*
+   * grad(PARTICLE_STRESS)
+   */
   
+  if ( pd->v[PARTICLE_STRESS11] )
+  {  
+      v = PARTICLE_STRESS11;
+      dofs = ei->dof[v];
+      for ( p=0; p<VIM; p++)
+	  {
+		  for ( q=0; q<VIM; q++)
+		  {
+			  for ( r=0; r<VIM; r++)
+			  {
+				  fv->grad_PS[r][p][q] = 0.0;
+				  
+				  for ( i=0; i<dofs; i++)
+				  {
+					  fv->grad_PS[r][p][q] += 
+					  *esp->PS[p][q][i] * bf[v]->grad_phi[i][r];
+				  }
+			  }
+		  }
+	  }
+      
+      /*
+       * div(PARTICLE_STRESS)
+       */
+      for ( r=0; r<dim; r++)
+	  {
+		   fv->div_PS[r]  = 0.0;
+		  for ( q=0; q<dim; q++)
+		  {
+			  fv->div_PS[r] += 
+			  fv->grad_PS[q][q][r];
+		  }
+	  }
+      
+      if ( pd->CoordinateSystem != CARTESIAN )
+	  {
+          for ( s=0; s<VIM; s++)
+		  {
+              for ( r=0; r<VIM; r++)
+			  {
+                  for ( p=0; p<VIM; p++)
+				  {
+                      fv->div_PS[s] +=
+					  fv->PS[p][s]*fv->grad_e[p][r][s];
+				  }
+			  }
+		  }
+		  
+          for ( s=0; s<VIM; s++)
+		  {
+              for ( r=0; r<VIM; r++)
+			  {
+                  for ( q=0; q<VIM; q++)
+				  {
+                      fv->div_PS[s] +=
+					  fv->PS[r][q]* fv->grad_e[q][r][s] ;
+				  }
+			  }
+		  }
+	  }
+  }
+  else if ( zero_unused_grads &&  upd->vp[PARTICLE_STRESS11] == -1 ) {  
+    for ( p=0; p<VIM; p++)
+      {
+	fv->div_PS[p] = 0.0;
+	for ( q=0; q<VIM; q++)
+	  {
+	    for ( r=0; r<VIM; r++)
+	      {
+		fv->grad_PS[r][p][q]=0.;
+	      }
+	  }
+      }
+  }
   
   /*
    * grad(vd)

@@ -205,6 +205,9 @@ PROTO(( int,
 	double,                 /* tt */
 	double));               /* dt */
 
+EXTERN int assemble_particle_stress( double,      /* mm_std_models.c,   tt parameter (time integration) */
+				     double);     /* dt, current time step                              */
+
 EXTERN int assemble_bond_evolution /* mm_std_models.c */
 PROTO((dbl,                     /* Current time */
        double ,			/* tt - parameter varies time integration from 
