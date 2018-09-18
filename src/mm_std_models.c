@@ -3820,7 +3820,7 @@ int
 suspension_balance(struct Species_Conservation_Terms *st,
 		   int w)                      /* species number */
 {     
-  int a, j, p, b, var;
+  int a, c, d, j, p, b, var;
   int status=1;
   int dim;
   dbl gamma_dot[DIM][DIM];
@@ -3847,6 +3847,8 @@ suspension_balance(struct Species_Conservation_Terms *st,
   dbl d_div_tau_p_dmesh[DIM][DIM][MDE];        /* derivative wrt mesh */
   dbl d_div_tau_p_dvd[DIM][DIM][MDE];          /* derivative wrt vorticity dir */
   dbl d_div_tau_p_dp[DIM][MDE];                /* derivative wrt pressure */
+
+  dbl div_particle_stress[DIM];
   
   dbl df_dmu0 = 0.0, dmu0_dcure = 0.0, dmu0_dT = 0.0;
   dbl del_rho = 0.0;
@@ -3971,9 +3973,16 @@ suspension_balance(struct Species_Conservation_Terms *st,
   memset( d_div_tau_p_dp, 0, sizeof(double) * DIM*MDE);
   
   /* This is the divergence of the particle stress  */
-  divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
-				   d_div_tau_p_dv, d_div_tau_p_dmesh, d_div_tau_p_dvd,d_div_tau_p_dp, w);
+  /*divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
+    d_div_tau_p_dv, d_div_tau_p_dmesh, d_div_tau_p_dvd,d_div_tau_p_dp, w);*/
 
+   memset(div_particle_stress, 0, DIM*sizeof(dbl));
+
+   div_particle_stress[0] = fv->div_PS[0];
+   div_particle_stress[1] = fv->div_PS[1];
+   div_tau_p[0] = fv->div_PS[0];
+   div_tau_p[1] = fv->div_PS[1];
+  
   
   /* this is the hindered settling term that modifies the flux */
   M = Dg*f;
@@ -3984,7 +3993,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
   /* assemble residual */
   for ( a=0; a<dim; a++)
     {
-      st->diff_flux[w][a] = -M*div_tau_p[a];
+      st->diff_flux[w][a] = -M*div_particle_stress[a];
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
     }
@@ -4000,7 +4009,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      
 	      c_term = -dM_dy*bf[var]->phi[j]*div_tau_p[a];
 	      
-	      c_term += -M*d_div_tau_p_dy[a][w][j];
+	      //c_term += -M*d_div_tau_p_dy[a][w][j];
 	      
 	      mu_term = -dM_dmu*d_mu->C[w][j]*div_tau_p[a];
 	      
@@ -4038,7 +4047,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	    {
 	      c_term = 0.;
 	      
-	      c_term += -M*d_div_tau_p_dp[a][j];
+	      //c_term += -M*d_div_tau_p_dp[a][j];
 
 	      st->d_diff_flux_dP[w][a] [j] = c_term;
 	    }
@@ -4049,8 +4058,8 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	{
 	  for ( j=0; j<ei->dof[var]; j++)
 	    {
-	      
-	      c_term = -M*d_div_tau_p_dgd[a][j];
+	      c_term = 0;
+	      //c_term = -M*d_div_tau_p_dgd[a][j];
 
 	      st->d_diff_flux_dSH[w][a] [j] = c_term;
 	    }
@@ -4083,8 +4092,8 @@ suspension_balance(struct Species_Conservation_Terms *st,
 		{
 		  for( j=0;  j<ei->dof[var]; j++)
 		    {
-		      c_term = -M*d_div_tau_p_dv[a][p][j];
-		      
+		      //c_term = -M*d_div_tau_p_dv[a][p][j];
+		      c_term = 0.;
 		      mu_term = 0.;
 		      
 		      st->d_diff_flux_dv[w][a][p][j] = c_term + mu_term;
@@ -4114,6 +4123,30 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	    }
 	} 
 
+      var = PARTICLE_STRESS11;
+      memset(st->d_diff_flux_dG, 0, MAX_CONC*DIM*DIM*DIM*MDE*sizeof(dbl));
+      
+      if(pd->v[var])
+	{
+	  for ( a=0; a<VIM; a++)   
+	    {
+	      for( c=0; c<VIM; c++ )
+		{
+		  for ( d=0; d<VIM; d++)
+		    {
+		      for( j=0;  j<ei->dof[var]; j++)
+			{
+			  c_term = -M * (double)delta(d,a) * bf[var]->grad_phi[j][c];
+		      
+			  mu_term = 0.;
+		      
+			  st->d_diff_flux_dG[w][a][c][d][j] = c_term + mu_term;
+			}
+		    }
+		}
+	    }
+	} 
+      
       var = MESH_DISPLACEMENT1;
       memset(st->d_diff_flux_dmesh, 0, MAX_CONC*DIM*DIM*MDE*sizeof(dbl));
       
@@ -4530,6 +4563,8 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
   dbl mu;
   dbl grad_mu[DIM];
   dbl *dmu_dY;
+  dbl particle_stress[DIM][DIM];
+  dbl div_part_stress[DIM];
   
   VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;  /* viscosity dependence */
   VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
@@ -4556,6 +4591,8 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
   /* Compute gammadot, grad(gammadot), gamma_dot[][], d_gd_dG, and d_grad_gd_dG */
   
   memset(gamma_dot, 0, DIM*DIM*sizeof(dbl) );
+  memset(particle_stress, 0, DIM*DIM*sizeof(dbl));
+  memset(div_part_stress, 0, DIM*sizeof(dbl));
   
   for( a=0; a<VIM; a++ )
     {
@@ -4564,6 +4601,14 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
 	  gamma_dot[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
 	}
     }
+
+  particle_stress[0][0] = fv->PS[0][0];
+  particle_stress[0][1] = fv->PS[0][1];
+  particle_stress[1][0] = fv->PS[1][0];
+  particle_stress[1][1] = fv->PS[1][1];
+
+  div_part_stress[0] = fv->div_PS[0];
+  div_part_stress[1] = fv->div_PS[1];
   
   /* get mu and grad_mu */
   mu = viscosity(gn, gamma_dot, d_mu);
@@ -4634,6 +4679,9 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
 	  div_tau_p[a] += mu0*qtensor[a][b]*(pp*grad_gd[b]+gammadot*d_pp_dy*grad_Y[w][b]);
 	}
     }
+
+  
+
   
   if (af->Assemble_Jacobian)
     {
@@ -5944,20 +5992,15 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
   dbl *Y;
   dbl mu, mu0, Kn, pp = 0., d_pp_dy = 0.;
   dbl y_norm, comp = 0., comp1;
-  dbl maxpack;
-  
-  /*
-   * Interpolation functions for variables and some of their derivatives.
-   */
-  
-  dbl phi_j;
-  
+  dbl maxpack;  
   dbl wt;
   
   /* Variables for stress */
   
   int R_ps[DIM][DIM]; 
-  int v_ps[DIM][DIM]; 
+  int v_ps[DIM][DIM];
+  dbl *dmu_dY;
+  dbl U_max, eps;
   
   status = 0;
   
@@ -6048,6 +6091,8 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
   /* get mu and grad_mu */
   
   mu = viscosity(gn, gamma_dot, NULL);
+
+  dmu_dY = &(mp->d_viscosity[MAX_VARIABLE_TYPES]);
   
   if(gn->ConstitutiveEquation == SUSPENSION
      || gn->ConstitutiveEquation == CARREAU_SUSPENSION
@@ -6083,7 +6128,7 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
 	}
   
       /* Migrate this input deck later */
-      Kn = 0.75;
+      Kn = mp->NSCoeff[w];
   
       /* This is the particle pressure */
       if((y_norm > 0.0)&&(y_norm < 0.95))
@@ -6121,6 +6166,8 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
 	  qtensor[a][a] = mp->u_qdiffusivity[w][a];
 	}
 
+      eps = 65.e-3;
+      U_max = 7.176;
       /*
        * Residuals_________________________________________________________________
        */
@@ -6149,7 +6196,7 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
 		  
 		      if ( pd->e[eqn] & T_ADVECTION )
 			{
-			  advection += mu0*pp*gammadot*qtensor[a][b];
+			  advection += mu0*pp*(gammadot+eps*U_max)*qtensor[a][b] + (mu - mu0) * gamma_dot[a][b];
 			  advection *= wt_func * det_J * wt * h3;
 			  advection *= pd->etm[eqn][(LOG2_ADVECTION)];
 			}
@@ -6162,7 +6209,7 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
 		  
 		      if ( pd->e[eqn] & T_SOURCE )
 			{
-			  source +=  tau_p[a][b];    
+			  source -=  tau_p[a][b];    
 			  source *= wt_func * det_J * h3 * wt;
 			  source *= pd->etm[eqn][(LOG2_SOURCE)];
 			}
@@ -6178,153 +6225,167 @@ assemble_particle_stress(dbl tt,	/* parameter to vary time integration from
        * Jacobian terms...
        */
   
-      /* if ( af->Assemble_Jacobian ) */
-      /*   { */
-      /*     for ( a=0; a<VIM; a++) */
-      /* 	{ */
-      /* 	  for ( b=0; b<VIM; b++) */
-      /* 	    { */
-      /* 	      eqn = R_ps[a][b]; */
-      /* 	      peqn = upd->ep[eqn]; */
+      if ( af->Assemble_Jacobian )
+        {
+          for ( a=0; a<VIM; a++)
+	    {
+	      for ( b=0; b<VIM; b++)
+		{
+		  eqn = R_ps[a][b];
+		  peqn = upd->ep[eqn];
 	      
-      /* 	      for ( i=0; i<ei->dof[eqn]; i++) */
-      /* 		{ */
-      /* 		  wt_func = bf[eqn]->phi[i];   /\* add Petrov-Galerkin terms as necessary *\/ */
+		  for ( i=0; i<ei->dof[eqn]; i++)
+		    {
+		      wt_func = bf[eqn]->phi[i];   /* add Petrov-Galerkin terms as necessary */
   
-      /* 		  /\* */
-      /* 		   * J_G_v */
-      /* 		   *\/ */
-      /* 		  for ( p=0; p<dim; p++) */
-      /* 		    { */
-      /* 		      var = VELOCITY1+p; */
-      /* 		      if ( pd->v[var] ) */
-      /* 			{ */
-      /* 			  pvar = upd->vp[var]; */
-      /* 			  for ( j=0; j<ei->dof[var]; j++) */
-      /* 			    { */
-      /* 			      phi_j = bf[var]->phi[j]; */
+		      /*
+		       * J_PS_v
+		       */
+		      for ( p=0; p<dim; p++)
+			{
+			  var = VELOCITY1+p;
+			  if ( pd->v[var] )
+			    {
+			      pvar = upd->vp[var];
+			      for ( j=0; j<ei->dof[var]; j++)
+				{
+				  advection = 0.;
 			      
-      /* 			      advection = 0.; */
+				  if ( pd->e[eqn] & T_ADVECTION )
+				    {
+				      advection += mu0 * pp * d_gd_dv[p][j] * qtensor[a][b];
+				      advection += (bf[var]->grad_phi_e[j][p][a][b] + bf[var]->grad_phi_e[j][p][b][a])*(mu-mu0);
+				      advection *= wt_func * det_J * wt *h3;
+				      advection *= pd->etm[eqn][(LOG2_ADVECTION)];
+				    }
 			      
-      /* 			      if ( pd->e[eqn] & T_ADVECTION ) */
-      /* 				{ */
-      /* 				  advection -= bf[var]->grad_phi_e[j][p][a][b]; */
-      /* 				  advection *= wt_func * det_J * wt *h3; */
-      /* 				  advection *= pd->etm[eqn][(LOG2_ADVECTION)]; */
-				  
-      /* 				} */
+				  source    = 0.;
 			      
-      /* 			      source    = 0.; */
-			      
-      /* 			      lec->J[peqn][pvar][i][j] += */
-      /* 				advection + source; */
-      /* 			    } */
-      /* 			} */
-      /* 		    } */
+				  lec->J[peqn][pvar][i][j] +=
+				    advection + source;
+				}
+			    }
+			}
 		  
-      /* 		  /\* */
-      /* 		   * J_G_d */
-      /* 		   *\/ */
-      /* 		  for ( p=0; p<dim; p++) */
-      /* 		    { */
-      /* 		      var = MESH_DISPLACEMENT1+p; */
-      /* 		      if ( pd->v[var] ) */
-      /* 			{ */
-      /* 			  pvar = upd->vp[var]; */
-      /* 			  for ( j=0; j<ei->dof[var]; j++) */
-      /* 			    { */
-      /* 			      phi_j = bf[var]->phi[j]; */
+		      /*
+		       * J_PS_d
+		       */
+		      for ( p=0; p<dim; p++)
+			{
+			  var = MESH_DISPLACEMENT1+p;
+			  if ( pd->v[var] )
+			    {
+			      pvar = upd->vp[var];
+			      for ( j=0; j<ei->dof[var]; j++)
+				{
+				  d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j];
 			      
-      /* 			      d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j]; */
+				  dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j];
 			      
-      /* 			      dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j]; */
+				  advection   = 0.;
 			      
-      /* 			      advection   = 0.; */
+				  if ( pd->e[eqn] & T_ADVECTION )
+				    {
+				      /*
+				       * three parts:
+				       *    advection_a =
+				       *    	Int ( d(Vv)/dmesh h3 |Jv| )
+				       *
+				       *    advection_b =
+				       *  (i)	Int ( Vv h3 d(|Jv|)/dmesh )
+				       *  (ii)      Int ( Vv dh3/dmesh |Jv|   )
+				       */
+				  
+				  
+				      advection_a =  mu0 * pp * (gammadot+ eps*U_max) * qtensor[a][b] + (mu-mu0) * gamma_dot[a][b];
+				  
+				      advection_a *=  (  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj );
+				  
+				      advection_b  = mu0 * pp * qtensor[a][b] * d_gd_dmesh[p][j];
+
+				      advection_b += (mu-mu0) * (fv->d_grad_v_dmesh[b][a][p][j] + fv->d_grad_v_dmesh[a][b][p][j]);
+				  
+				      advection_b *=  det_J * h3;
+				  
+				      advection = advection_a + advection_b;
+				  
+				      advection *= wt_func * wt * pd->etm[eqn][(LOG2_ADVECTION)];
+				  
+				    }
 			      
-      /* 			      if ( pd->e[eqn] & T_ADVECTION ) */
-      /* 				{ */
-      /* 				  /\* */
-      /* 				   * three parts:  */
-      /* 				   *    advection_a =  */
-      /* 				   *    	Int ( d(Vv)/dmesh h3 |Jv| ) */
-      /* 				   * */
-      /* 				   *    advection_b =  */
-      /* 				   *  (i)	Int ( Vv h3 d(|Jv|)/dmesh ) */
-      /* 				   *  (ii)      Int ( Vv dh3/dmesh |Jv|   ) */
-      /* 				   *\/ */
-				  
-				  
-      /* 				  advection_a =  -grad_v[a][b]; */
-				  
-      /* 				  advection_a *=  (  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj ); */
-				  
-      /* 				  advection_b  = -fv->d_grad_v_dmesh[a][b] [p][j]; */
-				  
-      /* 				  advection_b *=  det_J * h3; */
-				  
-      /* 				  advection = advection_a + advection_b; */
-				  
-      /* 				  advection *= wt_func * wt * pd->etm[eqn][(LOG2_ADVECTION)]; */
-				  
-      /* 				} */
+				  source = 0.;
 			      
-      /* 			      source = 0.; */
+				  if ( pd->e[eqn] & T_SOURCE )
+				    {
+				      source -=  tau_p[a][b];
+				  
+				      source *=  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj;
+				  
+				      source *= wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)];
+				  
+				    }
 			      
-      /* 			      if ( pd->e[eqn] & T_SOURCE ) */
-      /* 				{ */
-      /* 				  source +=  g[a][b]; */
-				  
-      /* 				  source *=  d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj; */
-				  
-      /* 				  source *= wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)]; */
-				  
-      /* 				} */
+				  lec->J[peqn][pvar][i][j] +=
+				    advection + source;
+				}
+			    }
+			}
+
+		      /* d_PS_dC */
+		      var = MASS_FRACTION;
+		      if ( pd->e[var] )
+			{
+			  pvar = upd->vp[var];
+			  for ( j=0; j<ei->dof[var]; j++)
+			    {
+			      advection = 0.;
+			      if ( pd->e[eqn] & T_ADVECTION )
+				{
+				  advection += mu0 * d_pp_dy * (gammadot+eps*U_max) * bf[var]->phi[j] * qtensor[a][b];
+				  advection += gamma_dot[a][b] * dmu_dY[w] * bf[var]->phi[j];
+				  advection *= wt_func * wt * det_J * h3 * pd->etm[eqn][(LOG2_ADVECTION)];
+				}
+
+			      source = 0.;
 			      
-      /* 			      lec->J[peqn][pvar][i][j] += */
-      /* 				advection + source; */
-      /* 			    } */
-      /* 			} */
-      /* 		    } */
-		  
-      /* 		  /\* */
-      /* 		   * J_G_G */
-      /* 		   *\/ */
-		  
-      /* 		  for ( p=0; p<VIM; p++) */
-      /* 		    { */
-      /* 		      for ( q=0; q<VIM; q++) */
-      /* 			{ */
-      /* 			  var =  v_g[p][q]; */
-			  
-      /* 			  if ( pd->v[var] ) */
-      /* 			    { */
-      /* 			      pvar = upd->vp[var]; */
-      /* 			      for ( j=0; j<ei->dof[var]; j++) */
-      /* 				{ */
-      /* 				  phi_j = bf[var]->phi[j]; */
-				  
-      /* 				  source = 0.;		       */
-				  
-      /* 				  if ( pd->e[eqn] & T_SOURCE ) */
-      /* 				    { */
-      /* 				      if((a == p) && (b == q)) */
-      /* 					{ */
-      /* 					  source = phi_j  * det_J * h3 * wt_func * wt * pd->etm[eqn][(LOG2_SOURCE)]; */
-      /* 					} */
-      /* 				    } */
-				  
-      /* 				  lec->J[peqn][pvar][i][j] += */
-      /* 				    source; */
-      /* 				} */
-      /* 			    } */
-      /* 			} */
-		      
-      /* 		    } */
-      /* 		}   */
-      /* 	    } */
-      /* 	} */
-  /*   } */
-    }
+			      lec->J[peqn][MAX_PROB_VAR + w][i][j] += advection + source;
+			    }
+			}
+
+		      /* d_PS_dPS   */
+		      for ( p = 0; p < dim; p++ )
+			{
+			  for ( q=0; q < dim; q++)
+			    {
+			      var = v_ps[p][q];
+
+			      if ( pd->v[var] )
+				{
+				  pvar = upd->vp[var];
+				  for (j=0; j<ei->dof[var]; j++)
+				    {
+				      source = 0.;
+
+				      if ( pd->e[eqn] & T_SOURCE )
+					{
+					  if (( a==p) && (b == q))
+					    {
+					      source -= bf[var]->phi[j] * det_J * h3* wt_func * wt
+						* pd->etm[eqn][(LOG2_SOURCE)];
+					    }
+					}
+
+				      lec->J[peqn][pvar][i][j] += source;
+				    }
+				}
+			    }
+			}		      
+
+		    } /* Loop over i          */
+		}     /* Loop over b          */
+	    }         /* Loop over a          */
+	}             /* If Assemble_Jacobian */
+    }                 /* Loop over species w  */
   return(status);
 }
 

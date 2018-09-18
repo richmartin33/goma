@@ -295,7 +295,7 @@ assemble_mass_transport(double time, /* present time valuel; KSC             */
   dbl dgrad_phi_i_dmesh[DIM];		/* ditto.  */
   dbl wt;
   int err;
-  int v_g[DIM][DIM];
+  int v_g[DIM][DIM], v_ps[DIM][DIM];
   int taylor_galerkin[MAX_CONC];
   int species = -1;             /* Which "w" is the particle phase ... */
   status = 0;
@@ -1714,7 +1714,50 @@ assemble_mass_transport(double time, /* present time valuel; KSC             */
 			    }
 			}
 		    } /*if ( cr->MassFluxModel == DM_SUSPENSION_BALANCE ) */
-			      
+
+		  
+		  /*
+		   * J_s_PS:
+		   */
+		   /* These terms only appear for this model */
+		  if ( cr->MassFluxModel == DM_SUSPENSION_BALANCE )
+		    {
+		      v_ps[0][0] = PARTICLE_STRESS11;
+		      v_ps[0][1] = PARTICLE_STRESS12;
+		      v_ps[1][0] = PARTICLE_STRESS21;
+		      v_ps[1][1] = PARTICLE_STRESS22;
+		      v_ps[0][2] = PARTICLE_STRESS13;
+		      v_ps[1][2] = PARTICLE_STRESS23;
+		      v_ps[2][0] = PARTICLE_STRESS31;
+		      v_ps[2][1] = PARTICLE_STRESS32; 
+		      v_ps[2][2] = PARTICLE_STRESS33; 
+
+		      for ( b=0; b<VIM; b++)
+			{
+			  for ( c=0; c<VIM; c++)
+			    {
+			      var = v_ps[b][c];		      
+			      if ( pd->v[var])
+				{
+				  pvar = upd->vp[var];
+				  for( j=0;  j<ei->dof[var] ; j++)
+				    {
+				      diffusion = 0.0;
+				      if ( pd->e[eqn] & T_DIFFUSION )
+					for ( p=0; p<VIM; p++)
+					  {
+					    diffusion += grad_phi_i[p]
+					      * s_terms.d_diff_flux_dG[w][p][b][c][j];
+					  }
+				      diffusion *= h3 * det_J * wt;
+				      diffusion *= pd->etm[eqn][(LOG2_DIFFUSION)];
+				      
+				      lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
+				    }
+				}
+			    }
+			}
+		    } /*if ( cr->MassFluxModel == DM_SUSPENSION_BALANCE ) */
 
 		}     /* if active_dofs */
 	    }				/* for (i) .... */
