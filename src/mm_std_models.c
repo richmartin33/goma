@@ -3855,17 +3855,21 @@ suspension_balance(struct Species_Conservation_Terms *st,
 				   wrt velocity */ 
   dbl d_gd_dmesh[DIM][MDE];     /* derivative of strain rate invariant 
 				   wrt mesh */
-  dbl d_lift_dgd;
+  dbl d_lift_dgd, y_cutoff, sh_cutoff, h_cutoff;
   
   /* Set up some convenient local variables and pointers */
   Y = fv->c;
   grad_Y = fv->grad_c;
+
+  y_cutoff = 0.7930984;
+  h_cutoff = 0.85-y_cutoff;
+  sh_cutoff = 18.39005;
   
   dim = pd->Num_Dim;
   h = 0.85 - fv->x[1];
-  if ( h < 0.05 )
+  if ( h < h_cutoff )
     {
-      h = 0.05;
+      h = h_cutoff;
     }
   
   /* Compute gamma_dot[][] */
@@ -4006,6 +4010,12 @@ suspension_balance(struct Species_Conservation_Terms *st,
 
   lift_coeff = 3. * mu0 * gammadot * 1.2 /(4 * 3.141592654 * h );
   d_lift_dgd = lift_coeff / gammadot;
+
+  if ( h == h_cutoff)
+    {
+      lift_coeff = 3. * mu0 * sh_cutoff * 1.2 / (4 * 3.141592654 * h_cutoff);
+      d_lift_dgd = 0.;
+    }
   
   /* assemble residual */
   for ( a=0; a<dim; a++)
