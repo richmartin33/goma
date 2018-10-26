@@ -3856,6 +3856,8 @@ suspension_balance(struct Species_Conservation_Terms *st,
   dbl d_gd_dmesh[DIM][MDE];     /* derivative of strain rate invariant 
 				   wrt mesh */
   dbl d_lift_dgd, y_cutoff, sh_cutoff, h_cutoff;
+  dbl d_lift_dc;
+  dbl lift_dir[DIM];
   
   /* Set up some convenient local variables and pointers */
   Y = fv->c;
@@ -4008,22 +4010,27 @@ suspension_balance(struct Species_Conservation_Terms *st,
   //dM_dmu = Dg * df_dmu;
   dM_dmu = 0.;
 
-  lift_coeff = 3. * mu0 * gammadot * 1.2 /(4 * 3.141592654 * h );
+  lift_coeff = 3. * mu0 * gammadot * 1.2 * Y[w] /(4 * 3.141592654 * h );
   d_lift_dgd = lift_coeff / gammadot;
+  d_lift_dc = lift_coeff / Y[w];
 
   if ( h == h_cutoff)
     {
-      lift_coeff = 3. * mu0 * sh_cutoff * 1.2 / (4 * 3.141592654 * h_cutoff);
+      lift_coeff = 3. * mu0 * sh_cutoff * 1.2 * Y[w] / (4 * 3.141592654 * h_cutoff);
       d_lift_dgd = 0.;
-    }
+      d_lift_dc = lift_coeff / Y[w];
+      }
+  lift_dir[0] = 0.;
+  lift_dir[1] = 1.;
+  lift_dir[2] = 0.;
   
   /* assemble residual */
   for ( a=0; a<dim; a++)
     {
       st->diff_flux[w][a] = -M*div_tau_p[a];
-      if ( a == 1 && h < 0.7)
+      if ( h < 0.7)
 	{
-	  st->diff_flux[w][a] -= M * lift_coeff;
+	  st->diff_flux[w][a] -= M * lift_coeff * lift_dir[a];
 	}
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
@@ -4035,20 +4042,25 @@ suspension_balance(struct Species_Conservation_Terms *st,
       var = MASS_FRACTION;
       for ( a=0; a<dim && pd->v[var]; a++)
 	{
+	  if ( h < 0.7 )
+	    {
+	      coeff = lift_coeff * lift_dir[a];
+	    }
+	  else
+	    {
+	      coeff = 0.;
+	    }
+	  
 	  for ( j=0; j<ei->dof[var]; j++)
 	    {
-	      if ( a == 1 && h < 0.7 )
-		{
-		  coeff = lift_coeff;
-		}
-	      else
-		{
-		  coeff = 0.;
-		}
-	      
 	      c_term = -dM_dy*bf[var]->phi[j]*(div_tau_p[a] + coeff);
 	      
 	      c_term += -M*d_div_tau_p_dy[a][w][j];
+
+	      if ( h < 0.7 )
+		{
+		  c_term -= M * d_lift_dc * lift_dir[a] * bf[var]->phi[j];
+		}
 	      
 	      mu_term = -dM_dmu*d_mu->C[w][j]*(div_tau_p[a] + coeff);
 	      
