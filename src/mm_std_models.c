@@ -3855,23 +3855,33 @@ suspension_balance(struct Species_Conservation_Terms *st,
 				   wrt velocity */ 
   dbl d_gd_dmesh[DIM][MDE];     /* derivative of strain rate invariant 
 				   wrt mesh */
-  dbl d_lift_dgd, y_cutoff, sh_cutoff, h_cutoff;
+  dbl d_lift_dgd;
   dbl d_lift_dc;
   dbl lift_dir[DIM];
+  dbl y_loc;
   
   /* Set up some convenient local variables and pointers */
   Y = fv->c;
   grad_Y = fv->grad_c;
-
-  y_cutoff = 0.7930984;
-  h_cutoff = 0.85-y_cutoff;
-  sh_cutoff = 18.39005;
   
   dim = pd->Num_Dim;
-  h = 0.85 - fv->x[1];
-  if ( h < h_cutoff )
+  memset(lift_dir, 0, DIM*sizeof(dbl));
+  
+  y_loc = fv->x[1];
+  if ( y_loc < 9e-4 )
     {
-      h = h_cutoff;
+      h = y_loc;
+      lift_dir[1] = -1.;
+    }
+  else
+    {
+      h = 1.8e-3 - y_loc;
+      lift_dir[1] = 1.;
+    }
+
+  if (h < 1.e-4)
+    {
+      h = 1.e-4;
     }
   
   /* Compute gamma_dot[][] */
@@ -4003,7 +4013,6 @@ suspension_balance(struct Species_Conservation_Terms *st,
   divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
 				   d_div_tau_p_dv, d_div_tau_p_dmesh, d_div_tau_p_dvd,d_div_tau_p_dp, w);
 
-  
   /* this is the hindered settling term that modifies the flux */
   M = Dg*f;
   dM_dy = Dg * df_dy;
@@ -4013,25 +4022,12 @@ suspension_balance(struct Species_Conservation_Terms *st,
   lift_coeff = 3. * mu0 * gammadot * 1.2 * Y[w] /(4 * 3.141592654 * h );
   d_lift_dgd = lift_coeff / gammadot;
   d_lift_dc = lift_coeff / Y[w];
-
-  if ( h == h_cutoff)
-    {
-      lift_coeff = 3. * mu0 * sh_cutoff * 1.2 * Y[w] / (4 * 3.141592654 * h_cutoff);
-      d_lift_dgd = 0.;
-      d_lift_dc = lift_coeff / Y[w];
-      }
-  lift_dir[0] = 0.;
-  lift_dir[1] = 1.;
-  lift_dir[2] = 0.;
   
   /* assemble residual */
   for ( a=0; a<dim; a++)
     {
       st->diff_flux[w][a] = -M*div_tau_p[a];
-      if ( h < 0.7)
-	{
-	  st->diff_flux[w][a] -= M * lift_coeff * lift_dir[a];
-	}
+      st->diff_flux[w][a] -= M * lift_coeff * lift_dir[a];
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
     }
@@ -4042,14 +4038,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
       var = MASS_FRACTION;
       for ( a=0; a<dim && pd->v[var]; a++)
 	{
-	  if ( h < 0.7 )
-	    {
-	      coeff = lift_coeff * lift_dir[a];
-	    }
-	  else
-	    {
-	      coeff = 0.;
-	    }
+	  coeff = lift_coeff * lift_dir[a];
 	  
 	  for ( j=0; j<ei->dof[var]; j++)
 	    {
@@ -4057,10 +4046,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      
 	      c_term += -M*d_div_tau_p_dy[a][w][j];
 
-	      if ( h < 0.7 )
-		{
-		  c_term -= M * d_lift_dc * lift_dir[a] * bf[var]->phi[j];
-		}
+	      c_term -= M * d_lift_dc * lift_dir[a] * bf[var]->phi[j];
 	      
 	      mu_term = -dM_dmu*d_mu->C[w][j]*(div_tau_p[a] + coeff);
 	      
@@ -4145,10 +4131,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
 		    {
 		      c_term = -M*d_div_tau_p_dv[a][p][j];
 
-		      if (a == 1 && h < 0.7)
-			{
-			  c_term -= M * d_lift_dgd * d_gd_dv[p][j];
-			}
+		      c_term -= M * d_lift_dgd * d_gd_dv[p][j] * lift_dir[a];
 		      
 		      mu_term = 0.;
 		      
@@ -4692,7 +4675,7 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
   
   d_pp2_dy2 = 2.*Kn/maxpack2*comp +  4.*Kn*y_norm/maxpack*comp1 + Kn*y_norm*y_norm*comp2;
 
-  gamma_nl = (50.e-3) * (7.)/ (0.85 * 0.85);
+  gamma_nl = (50.e-6) * (9.e-3)/ ((9e-4) * (9e-4));
   
   memset(div_tau_p, 0, DIM*sizeof(dbl));
   
