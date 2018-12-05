@@ -3858,27 +3858,18 @@ suspension_balance(struct Species_Conservation_Terms *st,
   dbl d_lift_dgd;
   dbl d_lift_dc;
   dbl lift_dir[DIM];
-  dbl y_loc;
   
   /* Set up some convenient local variables and pointers */
   Y = fv->c;
   grad_Y = fv->grad_c;
+
+  h = fv->external_field[0];
+  lift_dir[0] = fv->external_field[1];
+  lift_dir[1] = fv->external_field[2];
+  lift_dir[2] = fv->external_field[3];
   
   dim = pd->Num_Dim;
-  memset(lift_dir, 0, DIM*sizeof(dbl));
   
-  y_loc = fv->x[1];
-  if ( y_loc < 9e-4 )
-    {
-      h = y_loc;
-      lift_dir[1] = -1.;
-    }
-  else
-    {
-      h = 1.8e-3 - y_loc;
-      lift_dir[1] = 1.;
-    }
-
   if (h < 1.e-4)
     {
       h = 1.e-4;
@@ -4027,7 +4018,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
   for ( a=0; a<dim; a++)
     {
       st->diff_flux[w][a] = -M*div_tau_p[a];
-      st->diff_flux[w][a] -= M * lift_coeff * lift_dir[a];
+      st->diff_flux[w][a] += M * lift_coeff * lift_dir[a];
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
     }
@@ -4042,13 +4033,13 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	  
 	  for ( j=0; j<ei->dof[var]; j++)
 	    {
-	      c_term = -dM_dy*bf[var]->phi[j]*(div_tau_p[a] + coeff);
+	      c_term = -dM_dy*bf[var]->phi[j]*(div_tau_p[a] - coeff);
 	      
 	      c_term += -M*d_div_tau_p_dy[a][w][j];
 
-	      c_term -= M * d_lift_dc * lift_dir[a] * bf[var]->phi[j];
+	      c_term += M * d_lift_dc * lift_dir[a] * bf[var]->phi[j];
 	      
-	      mu_term = -dM_dmu*d_mu->C[w][j]*(div_tau_p[a] + coeff);
+	      mu_term = -dM_dmu*d_mu->C[w][j]*(div_tau_p[a] - coeff);
 	      
 	      g_term = ((f+ df_dy*Y[w])*bf[var]->phi[j] + Y[w]*df_dmu *d_mu->C[w][j]);
 	      g_term *= Dg * mp->momentum_source[a]*del_rho;
@@ -4131,7 +4122,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
 		    {
 		      c_term = -M*d_div_tau_p_dv[a][p][j];
 
-		      c_term -= M * d_lift_dgd * d_gd_dv[p][j] * lift_dir[a];
+		      c_term += M * d_lift_dgd * d_gd_dv[p][j] * lift_dir[a];
 		      
 		      mu_term = 0.;
 		      
@@ -4593,6 +4584,7 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
   dbl pp,  d_pp_dy, d_pp2_dy2;
   dbl comp, comp1, comp2 = 0, y_norm;
   dbl gamma_nl;
+  dbl U_max, L_char, radius_p;
   
   Y = fv->c;
   grad_Y = fv->grad_c;
@@ -4675,7 +4667,11 @@ divergence_particle_stress(dbl div_tau_p[DIM],               /* divergence of th
   
   d_pp2_dy2 = 2.*Kn/maxpack2*comp +  4.*Kn*y_norm/maxpack*comp1 + Kn*y_norm*y_norm*comp2;
 
-  gamma_nl = (50.e-6) * (9.e-3)/ ((9e-4) * (9e-4));
+  radius_p = mp->SBM_Lengths2[w][0];
+  L_char = mp->SBM_Lengths2[w][1];
+  U_max = mp->SBM_Lengths2[w][2];
+  
+  gamma_nl = radius_p * U_max / (L_char * L_char);
   
   memset(div_tau_p, 0, DIM*sizeof(dbl));
   

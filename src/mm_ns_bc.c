@@ -7502,7 +7502,7 @@ stress_no_v_dot_gradS(double func[MAX_MODES][6],
                      } /* End of J_S_c */
                    /* Sensitivities w.r.t. continuous velocity gradient - J_S_G */
                    var = VELOCITY_GRADIENT11;
-                   if (pd->v[var] )
+                   if (pd->v[var] && pd->v[POLYMER_STRESS11])
                      {
                       for ( p=0; p<VIM; p++)
                          {

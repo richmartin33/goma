@@ -5285,7 +5285,7 @@ assemble_continuity(dbl time_value,   /* current time */
 	   * J_c_G this term is only present for PSPG
 	   */
 	  var = VELOCITY_GRADIENT11;
-	  if ( PSPG && pdv[var] )
+	  if ( PSPG && pdv[var])
 	    {
 	      for ( p=0; p<VIM; p++)
 		{
@@ -27847,7 +27847,7 @@ fluid_stress( double Pi[DIM][DIM],
         }
     }
 
-  if ( d_Pi != NULL && pd->v[VELOCITY_GRADIENT11] )
+  if ( d_Pi != NULL && pd->v[VELOCITY_GRADIENT11] && pd->v[POLYMER_STRESS11])
     {
       for ( p=0; p<VIM; p++)
         {
@@ -28430,7 +28430,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
     }
 
   var = VELOCITY_GRADIENT11;
-  if(d_Pi!=NULL && pd->v[var])
+  if(d_Pi!=NULL && pd->v[var] && pd->v[POLYMER_STRESS11])
     {
       for(p=0; p<VIM; p++)
 	{
