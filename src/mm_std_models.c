@@ -3857,7 +3857,8 @@ suspension_balance(struct Species_Conservation_Terms *st,
   dbl df_dmu0 = 0.0, dmu0_dcure = 0.0, dmu0_dT = 0.0;
   dbl del_rho = 0.0;
   dbl d_lift_dgd, d_lift_dc;
-  dbl lift_dir[DIM], lift_coeff, h;
+  dbl lift_dir[DIM], lift_coeff, h, radius_p;
+  dbl dist_lift;
   
   /* Set up some convenient local variables and pointers */
   Y = fv->c;
@@ -3865,14 +3866,20 @@ suspension_balance(struct Species_Conservation_Terms *st,
   
   dim = pd->Num_Dim;
 
+  radius_p = mp->SBM_Lengths2[0][0];
+
   h = fv->external_field[0];
   lift_dir[0] = fv->external_field[1];
   lift_dir[1] = fv->external_field[2];
   lift_dir[2] = fv->external_field[3];
   
-  if (h < 1.e-4)
+  if (h < (1.e-4 + 1.e-2))
     {
-      h = 1.e-4;
+      dist_lift = 1.e-4;
+    }
+  else
+    {
+      dist_lift = h;
     }
   
   /* Compute gamma_dot[][] */
@@ -4010,9 +4017,24 @@ suspension_balance(struct Species_Conservation_Terms *st,
   //dM_dmu = Dg * df_dmu;
   dM_dmu = 0.;
 
-  lift_coeff = 3. * mu0 * gammadot * 1.2 * Y[w] / (4. * M_PIE * h);
+  lift_coeff = 3. * mu0 * gammadot * 1.2 * Y[w] / (4. * M_PIE * dist_lift);
+
   d_lift_dgd = lift_coeff / gammadot;
   d_lift_dc = lift_coeff / Y[w];
+  
+  if( dist_lift < (1.e-4 + 1.e-9) )
+    {
+      lift_coeff = 3. * mu0 * 840. * 1.2 * Y[w] / (4. * M_PIE * dist_lift);
+      d_lift_dgd = 0.;
+      d_lift_dc = lift_coeff / Y[w];
+    }
+
+  if( Y[w] < 1.e-6 )
+    {
+      lift_coeff = 0.;
+      d_lift_dgd = 0.;
+      d_lift_dc = 0.;
+    }
   
   /* assemble residual */
   for ( a=0; a<dim; a++)
