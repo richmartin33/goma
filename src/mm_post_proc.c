@@ -2642,9 +2642,9 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     lift_dir[1] = fv->external_field[2];
     lift_dir[2] = fv->external_field[3];
   
-    if (h < (1.e-4 + 1.e-2))
+    if (h < 3.e-3)
       {
-	dist_lift = 1.e-4;
+	dist_lift = 3.e-3;
       }
     else
       {
@@ -2653,9 +2653,9 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     
     lift_coeff = 3. * mu0 * gammadot * 1.2 / (4. * M_PIE * dist_lift);
 
-    if( dist_lift < (1.e-4 + 1.e-9))
+    if( dist_lift < (3.e-3 + 1.e-9))
       {
-	lift_coeff =  3. * mu0 * 840. * 1.2 / (4. * M_PIE * dist_lift);
+	lift_coeff =  3. * mu0 * 1100. * 1.2 / (4. * M_PIE * dist_lift);
       }
 
     local_post[LIFT_FORCE + index] = lift_coeff;
@@ -2663,7 +2663,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     
     index++;
 
-    if( Y[0] > 1.e-6 )
+    if( Y[0] >= 1.e-2 )
       {
 	lift_coeff2 = lift_coeff * Y[0];
       }

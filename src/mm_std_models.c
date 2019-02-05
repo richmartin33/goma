@@ -3873,9 +3873,9 @@ suspension_balance(struct Species_Conservation_Terms *st,
   lift_dir[1] = fv->external_field[2];
   lift_dir[2] = fv->external_field[3];
   
-  if (h < (1.e-4 + 1.e-2))
+  if (h < 3.e-3)
     {
-      dist_lift = 1.e-4;
+      dist_lift = 3.e-3;
     }
   else
     {
@@ -4022,14 +4022,14 @@ suspension_balance(struct Species_Conservation_Terms *st,
   d_lift_dgd = lift_coeff / gammadot;
   d_lift_dc = lift_coeff / Y[w];
   
-  if( dist_lift < (1.e-4 + 1.e-9) )
+  if( dist_lift < (3.e-3 + 1.e-9) )
     {
-      lift_coeff = 3. * mu0 * 840. * 1.2 * Y[w] / (4. * M_PIE * dist_lift);
+      lift_coeff = 3. * mu0 * 1100. * 1.2 * Y[w] / (4. * M_PIE * dist_lift);
       d_lift_dgd = 0.;
       d_lift_dc = lift_coeff / Y[w];
     }
 
-  if( Y[w] < 1.e-6 )
+  if( Y[w] < 1.e-2 )
     {
       lift_coeff = 0.;
       d_lift_dgd = 0.;
@@ -4043,6 +4043,10 @@ suspension_balance(struct Species_Conservation_Terms *st,
       st->diff_flux[w][a] += M * lift_coeff * lift_dir[a];
       st->diff_flux[w][a] += M*Y[w]*mp->momentum_source[a]*del_rho; 
       st->diff_flux[w][a] += -Dd[a]*grad_Y[w][a];
+      if( Y[w] < 1.e-4 )
+	{
+	  st->diff_flux[w][a] = 0.;
+	}
     }
   
   if (af->Assemble_Jacobian)
@@ -4068,6 +4072,10 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      
 	      st->d_diff_flux_dc[w][a] [w][j] = c_term + mu_term + g_term 
 		+ d_term;
+	      if ( Y[w] < 1.e-4 )
+		{
+		  st->d_diff_flux_dc[w][a][w][j] = 0.;
+		}
 	    }
 	  
 	  /* if filled_epoxy is used, there is a dependency of viscosity on
@@ -4098,6 +4106,11 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      c_term += -M*d_div_tau_p_dp[a][j];
 
 	      st->d_diff_flux_dP[w][a] [j] = c_term;
+
+	      if( Y[w] < 1.e-4)
+		{
+		  st->d_diff_flux_dP[w][a][j] = 0.;
+		}
 	    }
 	}
       
@@ -4110,6 +4123,11 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      c_term = -M*d_div_tau_p_dgd[a][j];
 
 	      st->d_diff_flux_dSH[w][a] [j] = c_term;
+
+	      if( Y[w] < 1.e-4 )
+		{
+		  st->d_diff_flux_dSH[w][a][j] = 0.;
+		}
 	    }
 	}
       
@@ -4126,6 +4144,11 @@ suspension_balance(struct Species_Conservation_Terms *st,
 	      g_term *= (Dg*Y[w]*mp->momentum_source[a]*del_rho)/mu0;
 	      
 	      st->d_diff_flux_dT[w][a][j] = c_term + mu_term + g_term ;
+
+	      if( Y[w] < 1.e-4 )
+		{
+		  st->d_diff_flux_dT[w][a][j] = 0.;
+		}
 	    }
 	}
       
@@ -4146,6 +4169,11 @@ suspension_balance(struct Species_Conservation_Terms *st,
 		      mu_term = 0.;
 		      
 		      st->d_diff_flux_dv[w][a][p][j] = c_term + mu_term;
+
+		      if( Y[w] < 1.e-4)
+			{
+			  st->d_diff_flux_dv[w][a][p][j] = 0.;
+			}
 		    }
 		}
 	    }
