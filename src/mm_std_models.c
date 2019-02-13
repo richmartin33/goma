@@ -3873,9 +3873,9 @@ suspension_balance(struct Species_Conservation_Terms *st,
   lift_dir[1] = fv->external_field[2];
   lift_dir[2] = fv->external_field[3];
   
-  if (h < 3.e-3)
+  if (h < 1.e-3)
     {
-      dist_lift = 3.e-3;
+      dist_lift = 1.e-3;
     }
   else
     {
@@ -4022,7 +4022,7 @@ suspension_balance(struct Species_Conservation_Terms *st,
   d_lift_dgd = lift_coeff / gammadot;
   d_lift_dc = lift_coeff / Y[w];
   
-  if( dist_lift < (3.e-3 + 1.e-9) )
+  if( dist_lift < (1.e-3 + 1.e-9) )
     {
       lift_coeff = 3. * mu0 * 1100. * 1.2 * Y[w] / (4. * M_PIE * dist_lift);
       d_lift_dgd = 0.;
